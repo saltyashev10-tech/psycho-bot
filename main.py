@@ -3,7 +3,7 @@ import logging
 from flask import Flask
 from threading import Thread
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, filters
 
 # --- Настройка логирования ---
 logging.basicConfig(level=logging.INFO)
