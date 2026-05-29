@@ -67,7 +67,7 @@ def main():
     logger.info(f"TELEGRAM_TOKEN: {'НАЙДЕН' if token_telegram else 'НЕ НАЙДЕН'}")
     
     # Если токен не найден, используем любой из альтернативных
-    final_token = token or token_alt or token_telegram
+    final_token = "8516115766:AAFhchBI9paY9KMDeT9WppKoEXshWtt67qE"
     
     if not final_token:
         logger.error("❌ Токен не найден ни в одной из переменных!")
