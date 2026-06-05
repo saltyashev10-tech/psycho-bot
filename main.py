@@ -5,7 +5,8 @@ from threading import Thread
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 import random
-import json
+import aiohttp
+import asyncio
 
 # Настройка логирования
 logging.basicConfig(
@@ -25,242 +26,195 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host='0.0.0.0', port=port)
 
-# ============ РАСШИРЕННАЯ КЛАВИАТУРА ============
+# ============ КЛАВИАТУРА ============
 main_keyboard = [
-    ['🧘 Медитации', '📝 Упражнения'],
-    ['💬 Поддержка', '📓 Дневник'],
-    ['🎵 Звуки природы', '🆘 Помощь'],
-    ['📊 Статистика', 'ℹ️ О боте']
+    ['🤖 Поговорить с ИИ', '🧘 Медитация'],
+    ['📝 Упражнение', '💬 Поддержка'],
+    ['📓 Дневник', '🆘 Помощь'],
+    ['ℹ️ О боте']
 ]
 
-meditation_keyboard = [
-    ['🌬️ Дыхание', '🧘 Осознанность'],
-    ['💪 Снятие стресса', '😴 Перед сном'],
-    ['🔙 Главное меню']
-]
-
-exercise_keyboard = [
-    ['🙏 Благодарность', '🔄 Переоценка'],
-    ['🌍 Заземление', '💪 Аффирмации'],
-    ['📝 Дневник мыслей', '🔙 Главное меню']
-]
-
-# ============ РАСШИРЕННЫЕ МЕДИТАЦИИ ============
+# ============ КОНТЕНТ (оставляем для резерва) ============
 MEDITATIONS = {
-    "breathing": """
-🌬️ **Дыхательная техника "4-7-8"**
-
-Эта техника помогает успокоиться за 1-2 минуты.
-
-📋 **Инструкция:**
-1. Сядьте удобно, выпрямите спину
-2. Сделайте глубокий вдох через нос на **4 счета**
-3. Задержите дыхание на **7 счетов**
-4. Медленно выдохните через рот на **8 счетов**
-5. Повторите **4-8 раз**
-
-✨ **Эффект:** снижает тревогу, успокаивает нервную систему.
-""",
-    "mindfulness": """
-🧘 **Медитация осознанности** (5 минут)
-
-🎯 **Цель:** научиться быть в настоящем моменте.
-
-📋 **Инструкция:**
-1. Закройте глаза и сосредоточьтесь на дыхании
-2. Замечайте каждую мысль, но не цепляйтесь за неё
-3. Представьте мысли как облака — они приходят и уходят
-4. Если отвлеклись — мягко вернитесь к дыханию
-5. Откройте глаза и зафиксируйте ощущения
-
-💡 **Совет:** Практикуйте ежедневно по 5-10 минут.
-""",
-    "stress_relief": """
-💪 **Медитация для снятия стресса** (7 минут)
-
-🎯 **Цель:** быстро снять физическое и эмоциональное напряжение.
-
-📋 **Инструкция:**
-1. Сядьте или лягте удобно
-2. На вдохе напрягите всё тело на 5 секунд
-3. На выдохе полностью расслабьтесь
-4. Повторите 3 раза
-5. Затем дышите спокойно, представляя, как стресс покидает тело
-
-💡 **Когда применять:** после тяжёлого дня, перед важными событиями.
-""",
-    "sleep": """
-😴 **Медитация перед сном** (10 минут)
-
-🎯 **Цель:** подготовить ум и тело ко сну.
-
-📋 **Инструкция:**
-1. Лягте в кровать, выключите свет
-2. Сосредоточьтесь на дыхании животом
-3. На выдохе мысленно говорите «спокойствие»
-4. Представьте тёплый свет, который расслабляет каждую часть тела
-5. Если мысли отвлекают — не боритесь, просто наблюдайте
-
-✨ **Эффект:** улучшает качество сна, снижает тревожность.
-"""
+    "breathing": "🌬️ **Дыхательная техника 4-7-8**\n\n1. Вдох на 4 счета\n2. Задержка на 7 счетов\n3. Выдох на 8 счетов",
+    "mindfulness": "🧘 **Медитация осознанности**\n\nСосредоточьтесь на дыхании, замечайте мысли без оценки.",
 }
 
-# ============ РАСШИРЕННЫЕ УПРАЖНЕНИЯ ============
 EXERCISES = {
-    "gratitude": """
-🙏 **Упражнение "Три благодарности"**
-
-🎯 **Цель:** научиться замечать хорошее в жизни.
-
-📋 **Инструкция:**
-Напишите (можно мысленно) прямо сейчас:
-1. За что я благодарен(на) **себе** сегодня?
-2. За что я благодарен(на) **другому человеку**?
-3. За что я благодарен(на) **миру/жизни**?
-
-✨ **Исследования:** ежедневная практика благодарности повышает уровень счастья на 25%.
-""",
-    "grounding": """
-🌍 **Техника "5-4-3-2-1"**
-
-🎯 **Цель:** быстро вернуться в настоящий момент при тревоге или панике.
-
-📋 **Инструкция:**
-Назовите (про себя или вслух):
-
-👁️ **5 вещей**, которые вы видите
-👂 **4 звука**, которые вы слышите
-🖐️ **3 вещи**, которые вы чувствуете кожей
-👃 **2 запаха**, которые вы ощущаете
-👅 **1 вкус**, который вы чувствуете
-
-✨ **Эффект:** помогает при панических атаках и сильной тревоге.
-""",
-    "reframe": """
-🔄 **Когнитивное переформулирование**
-
-🎯 **Цель:** научиться менять негативные мысли на реалистичные.
-
-📋 **Инструкция:**
-Подумайте о ситуации, которая вас тревожит:
-
-❌ **Мысль-автомат:** "У меня ничего не получится"
-✅ **Реалистичная мысль:** "У меня уже есть опыт, я справлялся(лась) раньше"
-
-❌ **Мысль-автомат:** "Все на меня смотрят и осуждают"
-✅ **Реалистичная мысль:** "Люди заняты собой, у каждого свои заботы"
-
-Теперь перепишите свои негативные мысли.
-""",
-    "affirmations": """
-💪 **Утренние аффирмации**
-
-🎯 **Цель:** настроиться на позитивный день.
-
-📋 **Повторяйте каждое утро:**
-
-🌟 Я принимаю себя таким(ой), какой(ая) я есть
-🌟 У меня достаточно сил и ресурсов
-🌟 Я разрешаю себе ошибаться и учиться
-🌟 Я открыт(а) новым возможностям
-🌟 Сегодня будет хороший день
-
-💡 **Совет:** Повторяйте перед зеркалом или записывайте в дневник.
-""",
-    "thought_diary": """
-📝 **Дневник мыслей** (КПТ-упражнение)
-
-🎯 **Цель:** отслеживать связь между мыслями, эмоциями и поведением.
-
-📋 **Ответьте на вопросы:**
-
-1. **Ситуация:** Что произошло?
-2. **Мысли:** Что я подумал(а) в тот момент?
-3. **Эмоции:** Что я почувствовал(а) (оценка 1-10)?
-4. **Действия:** Что я сделал(а)?
-5. **Новая мысль:** Как можно подумать иначе?
-
-💡 **Результат:** вы научитесь замечать и менять автоматические негативные мысли.
-"""
+    "gratitude": "🙏 **Три благодарности**\n\nНапишите, за что вы благодарны себе, другому человеку и миру.",
+    "grounding": "🌍 **Заземление 5-4-3-2-1**\n\nНазовите: 5 вещей, 4 звука, 3 тактильных ощущения, 2 запаха, 1 вкус.",
 }
 
-# ============ ЗВУКИ ПРИРОДЫ ============
-NATURE_SOUNDS = {
-    "rain": "🌧️ Звук дождя: https://youtu.be/dQw4w9WgXcQ (замените на реальную ссылку)",
-    "forest": "🌲 Звуки леса: https://youtu.be/dQw4w9WgXcQ",
-    "ocean": "🌊 Океан: https://youtu.be/dQw4w9WgXcQ",
-    "fire": "🔥 Костер: https://youtu.be/dQw4w9WgXcQ"
-}
-
-# ============ ПОДДЕРЖКА ============
 SUPPORT_MESSAGES = [
-    "✨ Вы уже сделали большой шаг, обратившись за поддержкой. Это проявление силы!",
-    "💚 Ваши чувства важны и имеют значение. Спасибо, что делитесь ими.",
-    "🌟 Никто не обязан быть идеальным. Позвольте себе быть человеком с разными эмоциями.",
-    "🌸 Помните: трудные времена не длятся вечно.",
-    "💙 Вы не один. Многие люди проходят через похожие переживания.",
-    "🌱 Каждый день — это новый шанс начать заботиться о себе.",
-    "🕊️ Вы делаете достаточно. Вы достаточно хороши.",
-    "💪 Просить помощи — это не слабость, а мудрость.",
+    "✨ Вы уже сделали большой шаг!",
+    "💚 Ваши чувства важны.",
+    "🌟 Позвольте себе быть человеком.",
 ]
 
-# Хранение статистики пользователей (в памяти, при перезапуске сбрасывается)
-user_stats = {}
+# ============ ИНТЕГРАЦИЯ С DEEPSEEK ============
+# Системный промпт — задаёт "личность" бота
+SYSTEM_PROMPT = """Ты — добрый и эмпатичный психологический помощник по имени ПсихоBot.
+
+Твои правила:
+1. Всегда отвечай на русском языке
+2. Будь внимательным и поддерживающим
+3. Не ставь диагнозов и не давай медицинских советов
+4. Если пользователь говорит о суицидальных мыслях — сразу предложи обратиться к специалисту (телефон доверия: 8-800-2000-122)
+5. Используй простой, понятный язык
+6. Задавай уточняющие вопросы, чтобы лучше понять состояние пользователя
+7. Предлагай простые техники (дыхание, заземление) если видишь тревогу
+
+Примеры ответов:
+- "Я слышу, что тебе сейчас тяжело. Расскажи подробнее, что происходит?"
+- "Понимаю твои чувства. Это нормально — испытывать грусть/тревогу/злость. Давай попробуем дыхательное упражнение?"
+- "Спасибо, что поделился. Как ты думаешь, что могло бы тебе помочь прямо сейчас?""""
+
+async def ask_deepseek(user_message: str, conversation_history: list = None) -> str:
+    """Отправляет запрос к DeepSeek API и возвращает ответ"""
+    
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    
+    # Если ключа нет — возвращаем заглушку
+    if not api_key:
+        logger.warning("DEEPSEEK_API_KEY не найден, использую заглушку")
+        return random.choice([
+            "Расскажите подробнее, я вас слушаю.",
+            "Понимаю. Что вы чувствуете сейчас?",
+            "Спасибо, что делитесь. Как я могу помочь?"
+        ])
+    
+    # Формируем историю диалога
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    
+    if conversation_history:
+        messages.extend(conversation_history[-10:])  # Последние 10 сообщений для контекста
+    
+    messages.append({"role": "user", "content": user_message})
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.deepseek.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "deepseek-chat",
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 500
+                },
+                timeout=30
+            ) as response:
+                
+                if response.status == 200:
+                    data = await response.json()
+                    return data["choices"][0]["message"]["content"]
+                else:
+                    error_text = await response.text()
+                    logger.error(f"DeepSeek API ошибка: {response.status} - {error_text}")
+                    return "Извините, сейчас не могу ответить. Попробуйте позже или выберите другую функцию."
+                    
+    except asyncio.TimeoutError:
+        logger.error("DeepSeek API timeout")
+        return "Сервис временно недоступен. Попробуйте ещё раз через минуту."
+    except Exception as e:
+        logger.error(f"DeepSeek API exception: {e}")
+        return "Произошла ошибка. Давайте попробуем простое упражнение: сделайте 3 глубоких вдоха."
 
 # ============ ОБРАБОТЧИКИ ============
+# Хранилище истории диалогов (в памяти, при перезапуске сбрасывается)
+user_conversations = {}
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
     
-    # Инициализируем статистику
-    if user_id not in user_stats:
-        user_stats[user_id] = {"meditations": 0, "exercises": 0, "start_date": str(update.message.date)}
+    # Инициализируем историю пользователя
+    if user_id not in user_conversations:
+        user_conversations[user_id] = []
     
     await update.message.reply_text(
         f"🙏 Привет, {user.first_name}!\n\n"
-        f"Я бот психологической поддержки. Я здесь, чтобы помочь:\n"
-        f"• справиться с тревогой и стрессом\n"
-        f"• восстановить эмоциональное равновесие\n"
-        f"• найти внутренние ресурсы\n\n"
+        f"Я психологический помощник с ИИ. Я могу:\n"
+        f"🤖 **Поговорить с ИИ** — обсудить чувства и получить поддержку\n"
+        f"🧘 **Медитация** — короткие практики для расслабления\n"
+        f"📝 **Упражнение** — психологические техники\n"
+        f"💬 **Поддержка** — ободряющие сообщения\n"
+        f"📓 **Дневник** — записать мысли\n\n"
         f"**Выберите, что вам нужно:**",
         reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
-async def show_meditations(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка диалога с ИИ"""
+    user_id = update.effective_user.id
+    
+    # Инициализируем историю, если её нет
+    if user_id not in user_conversations:
+        user_conversations[user_id] = []
+    
+    # Ждём следующее сообщение
+    await update.message.reply_text(
+        "🤖 **Режим диалога с ИИ**\n\n"
+        "Расскажите, что вас беспокоит. Я внимательно выслушаю и постараюсь помочь.\n\n"
+        "Чтобы выйти из режима, отправьте /cancel",
+        parse_mode="Markdown"
+    )
+    context.user_data['ai_mode'] = True
+
+async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает сообщение в режиме ИИ"""
+    if not context.user_data.get('ai_mode'):
+        return False
+    
+    user_id = update.effective_user.id
+    user_message = update.message.text
+    
+    # Показываем, что бот "печатает"
+    await update.message.chat.send_action(action="typing")
+    
+    # Получаем историю пользователя
+    history = user_conversations.get(user_id, [])
+    
+    # Запрашиваем ответ у DeepSeek
+    response = await ask_deepseek(user_message, history)
+    
+    # Сохраняем в историю
+    history.append({"role": "user", "content": user_message})
+    history.append({"role": "assistant", "content": response})
+    user_conversations[user_id] = history
+    
+    # Отправляем ответ
+    await update.message.reply_text(response)
+    
+    return True
+
+async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        ['🌬️ Дыхание 4-7-8'],
+        ['🧘 Осознанность'],
+        ['🔙 Главное меню']
+    ]
     await update.message.reply_text(
         "🧘 **Выберите медитацию:**",
-        reply_markup=ReplyKeyboardMarkup(meditation_keyboard, resize_keyboard=True),
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
-async def show_exercises(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        ['🙏 Три благодарности'],
+        ['🌍 Заземление'],
+        ['🔙 Главное меню']
+    ]
     await update.message.reply_text(
         "📝 **Выберите упражнение:**",
-        reply_markup=ReplyKeyboardMarkup(exercise_keyboard, resize_keyboard=True),
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
         parse_mode="Markdown"
     )
-
-async def show_nature_sounds(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    sounds_text = "🎵 **Звуки природы для релаксации:**\n\n"
-    for key, value in NATURE_SOUNDS.items():
-        sounds_text += f"• {value}\n"
-    sounds_text += "\n💡 *Совет:* используйте наушники для лучшего эффекта."
-    await update.message.reply_text(sounds_text, parse_mode="Markdown")
-
-async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    stats = user_stats.get(user_id, {"meditations": 0, "exercises": 0})
-    
-    stats_text = f"""
-📊 **Ваша статистика:**
-
-🧘 Медитаций выполнено: {stats.get('meditations', 0)}
-📝 Упражнений выполнено: {stats.get('exercises', 0)}
-
-🌟 Вы молодец! Продолжайте в том же духе!
-"""
-    await update.message.reply_text(stats_text, parse_mode="Markdown")
 
 async def handle_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = random.choice(SUPPORT_MESSAGES)
@@ -271,14 +225,10 @@ async def handle_emergency(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🆘 **Если вам нужна помощь прямо сейчас:**
 
 📞 **Горячие линии (24/7):**
-
 • **8-800-2000-122** — Единый телефон доверия
 • **112** — Экстренные службы
 
-🌐 **Онлайн-помощь:**
-• https://pomogut.ru — бесплатная психологическая помощь
-
-💙 **Помните:** обратиться за помощью — это правильно и ответственно.
+💙 Помните: обратиться за помощью — это правильно.
 """
     await update.message.reply_text(emergency_text)
 
@@ -287,16 +237,15 @@ async def handle_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ℹ️ **О боте психологической поддержки**
 
 **Что умеет бот:**
-• 🧘 4 вида медитаций
-• 📝 5 психологических упражнений
-• 🎵 Звуки природы для релаксации
-• 💬 Поддержка в трудную минуту
-• 📓 Дневник настроения
-• 📊 Статистика прогресса
+• 🤖 **ИИ-помощник** — осмысленный диалог с нейросетью
+• 🧘 **Медитации** — практики осознанности
+• 📝 **Упражнения** — психологические техники
+• 💬 **Поддержка** — ободряющие сообщения
+• 📓 **Дневник** — сохранение мыслей
 
-**Важно:** Я не заменяю профессионального психолога. Если вам тяжело — обратитесь к специалисту.
+**Технологии:** Python + DeepSeek AI + Render + UptimeRobot
 
-**Разработчик:** Проект создан с заботой о ментальном здоровье.
+**Важно:** Я не заменяю профессионального психолога.
 """
     await update.message.reply_text(about_text)
 
@@ -305,17 +254,18 @@ async def handle_diary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📓 **Дневник настроения**\n\n"
         "Напишите, что вы чувствуете сейчас...\n"
-        "Это может быть:\n"
-        "• ваше настроение\n"
-        "• мысли, которые беспокоят\n"
-        "• то, за что вы благодарны\n\n"
-        "Просто напишите сообщение — и оно сохранится.\n"
-        "Чтобы выйти из режима дневника, отправьте /cancel",
+        "Чтобы выйти, отправьте /cancel",
         parse_mode="Markdown"
     )
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get('diary_mode'):
+    if context.user_data.get('ai_mode'):
+        context.user_data['ai_mode'] = False
+        await update.message.reply_text(
+            "Режим ИИ завершён. Возвращаюсь в главное меню.",
+            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
+        )
+    elif context.user_data.get('diary_mode'):
         context.user_data['diary_mode'] = False
         await update.message.reply_text(
             "Режим дневника завершён.",
@@ -327,82 +277,55 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============ ГЛАВНЫЙ ОБРАБОТЧИК ============
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    user_id = update.effective_user.id
     
-    # Инициализация статистики
-    if user_id not in user_stats:
-        user_stats[user_id] = {"meditations": 0, "exercises": 0, "start_date": str(update.message.date)}
+    # Сначала проверяем режим ИИ (если активен)
+    if context.user_data.get('ai_mode'):
+        await handle_ai_message(update, context)
+        return
     
     # Режим дневника
     if context.user_data.get('diary_mode'):
         await update.message.reply_text("✅ Запись сохранена в дневнике.")
         return
     
-    # ===== МЕДИТАЦИИ =====
-    if text == "🧘 Медитации":
-        await show_meditations(update, context)
-    elif text == "🌬️ Дыхание":
-        await update.message.reply_text(MEDITATIONS["breathing"])
-        user_stats[user_id]["meditations"] += 1
-    elif text == "🧘 Осознанность":
-        await update.message.reply_text(MEDITATIONS["mindfulness"])
-        user_stats[user_id]["meditations"] += 1
-    elif text == "💪 Снятие стресса":
-        await update.message.reply_text(MEDITATIONS["stress_relief"])
-        user_stats[user_id]["meditations"] += 1
-    elif text == "😴 Перед сном":
-        await update.message.reply_text(MEDITATIONS["sleep"])
-        user_stats[user_id]["meditations"] += 1
-    
-    # ===== УПРАЖНЕНИЯ =====
-    elif text == "📝 Упражнения":
-        await show_exercises(update, context)
-    elif text == "🙏 Благодарность":
-        await update.message.reply_text(EXERCISES["gratitude"])
-        user_stats[user_id]["exercises"] += 1
-    elif text == "🌍 Заземление":
-        await update.message.reply_text(EXERCISES["grounding"])
-        user_stats[user_id]["exercises"] += 1
-    elif text == "🔄 Переоценка":
-        await update.message.reply_text(EXERCISES["reframe"])
-        user_stats[user_id]["exercises"] += 1
-    elif text == "💪 Аффирмации":
-        await update.message.reply_text(EXERCISES["affirmations"])
-        user_stats[user_id]["exercises"] += 1
-    elif text == "📝 Дневник мыслей":
-        await update.message.reply_text(EXERCISES["thought_diary"])
-        user_stats[user_id]["exercises"] += 1
-    
-    # ===== ДРУГИЕ КНОПКИ =====
-    elif text == "🎵 Звуки природы":
-        await show_nature_sounds(update, context)
+    # Обработка кнопок
+    if text == "🤖 Поговорить с ИИ":
+        await handle_ai_chat(update, context)
+    elif text == "🧘 Медитация":
+        await handle_meditation(update, context)
+    elif text == "📝 Упражнение":
+        await handle_exercise(update, context)
     elif text == "💬 Поддержка":
         await handle_support(update, context)
     elif text == "📓 Дневник":
         await handle_diary(update, context)
     elif text == "🆘 Помощь":
         await handle_emergency(update, context)
-    elif text == "📊 Статистика":
-        await show_stats(update, context)
     elif text == "ℹ️ О боте":
         await handle_about(update, context)
     elif text == "🔙 Главное меню":
         await start(update, context)
+    elif text == "🌬️ Дыхание 4-7-8":
+        await update.message.reply_text(MEDITATIONS["breathing"])
+    elif text == "🧘 Осознанность":
+        await update.message.reply_text(MEDITATIONS["mindfulness"])
+    elif text == "🙏 Три благодарности":
+        await update.message.reply_text(EXERCISES["gratitude"])
+    elif text == "🌍 Заземление":
+        await update.message.reply_text(EXERCISES["grounding"])
     else:
         await update.message.reply_text(
             "Используйте кнопки меню для навигации.\n\n"
-            "🧘 **Медитации** — 4 практики осознанности\n"
-            "📝 **Упражнения** — 5 психологических техник\n"
-            "🎵 **Звуки природы** — для релаксации\n"
-            "💬 **Поддержка** — ободряющие сообщения\n"
-            "📓 **Дневник** — сохранить мысли и чувства\n"
-            "📊 **Статистика** — отслеживайте прогресс",
+            "🤖 **Поговорить с ИИ** — живой диалог с нейросетью\n"
+            "🧘 **Медитация** — практики осознанности\n"
+            "📝 **Упражнение** — психологические техники\n"
+            "💬 **Поддержка** — ободряющие сообщения",
             parse_mode="Markdown"
         )
 
 # ============ ЗАПУСК ============
 def main():
-    token = "8516115766:AAFhchBI9paY9KMDeT9WppKoEXshWtt67qE"
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
     
     if not token:
         logger.error("Токен не найден!")
@@ -421,7 +344,7 @@ def main():
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    logger.info("✅ Бот психологической поддержки запущен!")
+    logger.info("✅ Бот с ИИ запущен!")
     app.run_polling()
 
 if __name__ == "__main__":
