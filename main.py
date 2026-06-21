@@ -76,7 +76,7 @@ SYSTEM_PROMPT = """
 async def ask_deepseek(user_message: str, conversation_history: list = None) -> str:
     """Отправляет запрос к DeepSeek API и возвращает ответ"""
     
-    api_key = os.getenv("DEEPSEEK_API_KEY")
+    api_key = "sk-869713b01a1e4d31af870a6460f2d9e1"
     
     # Если ключа нет — возвращаем заглушку
     if not api_key:
