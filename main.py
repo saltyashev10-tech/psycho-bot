@@ -7,6 +7,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, ContextTyp
 import random
 import aiohttp
 import asyncio
+from database import Database
 
 # Настройка логирования
 logging.basicConfig(
@@ -15,7 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Flask приложение для Render
+# Инициализация базы данных
+db = Database("psycho_bot.db")
+
+# Flask приложение
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
@@ -26,15 +30,15 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host='0.0.0.0', port=port)
 
-# ============ КЛАВИАТУРА ============
+# Клавиатура
 main_keyboard = [
     ['🤖 Поговорить с ИИ', '🧘 Медитация'],
     ['📝 Упражнение', '💬 Поддержка'],
-    ['📓 Дневник', '🆘 Помощь'],
-    ['ℹ️ О боте']
+    ['📓 Дневник', '📊 Статистика'],
+    ['🆘 Помощь', 'ℹ️ О боте']
 ]
 
-# ============ КОНТЕНТ (оставляем для резерва) ============
+# Контент
 MEDITATIONS = {
     "breathing": "🌬️ **Дыхательная техника 4-7-8**\n\n1. Вдох на 4 счета\n2. Задержка на 7 счетов\n3. Выдох на 8 счетов",
     "mindfulness": "🧘 **Медитация осознанности**\n\nСосредоточьтесь на дыхании, замечайте мысли без оценки.",
@@ -51,48 +55,26 @@ SUPPORT_MESSAGES = [
     "🌟 Позвольте себе быть человеком.",
 ]
 
-# ============ ИНТЕГРАЦИЯ С DEEPSEEK ============
-# Системный промпт — задаёт "личность" бота
-# ============ ИНТЕГРАЦИЯ С DEEPSEEK ============
-# Системный промпт — задаёт "личность" бота
+# Системный промпт для DeepSeek
 SYSTEM_PROMPT = """
-Ты — добрый и эмпатичный психологический помощник по имени ПсихоBot.
-
-Твои правила:
-1. Всегда отвечай на русском языке
-2. Будь внимательным и поддерживающим
-3. Не ставь диагнозов и не давай медицинских советов
-4. Если пользователь говорит о суицидальных мыслях — сразу предложи обратиться к специалисту (телефон доверия: 8-800-2000-122)
-5. Используй простой, понятный язык
-6. Задавай уточняющие вопросы, чтобы лучше понять состояние пользователя
-7. Предлагай простые техники (дыхание, заземление) если видишь тревогу
-
-Примеры ответов:
-- "Я слышу, что тебе сейчас тяжело. Расскажи подробнее, что происходит?"
-- "Понимаю твои чувства. Это нормально — испытывать грусть/тревогу/злость. Давай попробуем дыхательное упражнение?"
-- "Спасибо, что поделился. Как ты думаешь, что могло бы тебе помочь прямо сейчас?"
+Ты — добрый психологический помощник.
+Отвечай на русском, будь внимательным.
+Не ставь диагнозов.
 """
 
 async def ask_deepseek(user_message: str, conversation_history: list = None) -> str:
-    """Отправляет запрос к DeepSeek API и возвращает ответ"""
+    api_key = os.getenv("DEEPSEEK_API_KEY")
     
-    api_key = "sk-869713b01a1e4d31af870a6460f2d9e1"
-    
-    # Если ключа нет — возвращаем заглушку
     if not api_key:
-        logger.warning("DEEPSEEK_API_KEY не найден, использую заглушку")
         return random.choice([
             "Расскажите подробнее, я вас слушаю.",
-            "Понимаю. Что вы чувствуете сейчас?",
-            "Спасибо, что делитесь. Как я могу помочь?"
+            "Понимаю. Что вы чувствуете сейчас?"
         ])
     
-    # Формируем историю диалога
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    
     if conversation_history:
-        messages.extend(conversation_history[-10:])  # Последние 10 сообщений для контекста
-    
+        for msg in conversation_history[-6:]:
+            messages.append(msg)
     messages.append({"role": "user", "content": user_message})
     
     try:
@@ -111,92 +93,70 @@ async def ask_deepseek(user_message: str, conversation_history: list = None) -> 
                 },
                 timeout=30
             ) as response:
-                
                 if response.status == 200:
                     data = await response.json()
                     return data["choices"][0]["message"]["content"]
                 else:
-                    error_text = await response.text()
-                    logger.error(f"DeepSeek API ошибка: {response.status} - {error_text}")
-                    return "Извините, сейчас не могу ответить. Попробуйте позже или выберите другую функцию."
-                    
-    except asyncio.TimeoutError:
-        logger.error("DeepSeek API timeout")
-        return "Сервис временно недоступен. Попробуйте ещё раз через минуту."
+                    return "Извините, сервис временно недоступен. Попробуйте позже."
     except Exception as e:
-        logger.error(f"DeepSeek API exception: {e}")
-        return "Произошла ошибка. Давайте попробуем простое упражнение: сделайте 3 глубоких вдоха."
+        logger.error(f"DeepSeek error: {e}")
+        return "Произошла ошибка. Давайте попробуем простое дыхательное упражнение."
 
-# ============ ОБРАБОТЧИКИ ============
-# Хранилище истории диалогов (в памяти, при перезапуске сбрасывается)
 user_conversations = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
     
-    # Инициализируем историю пользователя
-    if user_id not in user_conversations:
-        user_conversations[user_id] = []
+    # Сохраняем пользователя в базу
+    db.add_user(user_id, user.username, user.first_name, user.last_name)
+    db.update_last_active(user_id)
     
     await update.message.reply_text(
-        f"🙏 Привет, {user.first_name}!\n\n"
-        f"Я психологический помощник с ИИ. Я могу:\n"
-        f"🤖 **Поговорить с ИИ** — обсудить чувства и получить поддержку\n"
-        f"🧘 **Медитация** — короткие практики для расслабления\n"
-        f"📝 **Упражнение** — психологические техники\n"
-        f"💬 **Поддержка** — ободряющие сообщения\n"
-        f"📓 **Дневник** — записать мысли\n\n"
-        f"**Выберите, что вам нужно:**",
-        reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True),
-        parse_mode="Markdown"
+        f"🙏 Привет, {user.first_name}!\n\nЯ психологический помощник с ИИ.\nВыберите действие:",
+        reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
     )
 
 async def handle_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка диалога с ИИ"""
     user_id = update.effective_user.id
-    
-    # Инициализируем историю, если её нет
-    if user_id not in user_conversations:
-        user_conversations[user_id] = []
-    
-    # Ждём следующее сообщение
-    await update.message.reply_text(
-        "🤖 **Режим диалога с ИИ**\n\n"
-        "Расскажите, что вас беспокоит. Я внимательно выслушаю и постараюсь помочь.\n\n"
-        "Чтобы выйти из режима, отправьте /cancel",
-        parse_mode="Markdown"
-    )
+    db.update_last_active(user_id)
     context.user_data['ai_mode'] = True
+    await update.message.reply_text(
+        "🤖 Режим диалога с ИИ\n\nРасскажите, что вас беспокоит.\nЧтобы выйти, отправьте /cancel"
+    )
 
 async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обрабатывает сообщение в режиме ИИ"""
     if not context.user_data.get('ai_mode'):
         return False
     
     user_id = update.effective_user.id
     user_message = update.message.text
     
-    # Показываем, что бот "печатает"
+    db.update_last_active(user_id)
+    db.increment_stat(user_id, "total_messages")
+    db.increment_stat(user_id, "ai_messages_count")
+    
     await update.message.chat.send_action(action="typing")
     
-    # Получаем историю пользователя
     history = user_conversations.get(user_id, [])
-    
-    # Запрашиваем ответ у DeepSeek
     response = await ask_deepseek(user_message, history)
     
-    # Сохраняем в историю
+    # Сохраняем в историю и базу
     history.append({"role": "user", "content": user_message})
     history.append({"role": "assistant", "content": response})
-    user_conversations[user_id] = history
+    user_conversations[user_id] = history[-20:]  # Храним последние 20 сообщений
     
-    # Отправляем ответ
+    db.add_ai_message(user_id, "user", user_message)
+    db.add_ai_message(user_id, "assistant", response)
+    
     await update.message.reply_text(response)
-    
     return True
 
 async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    db.increment_stat(user_id, "meditations_count")
+    
     keyboard = [
         ['🌬️ Дыхание 4-7-8'],
         ['🧘 Осознанность'],
@@ -209,6 +169,10 @@ async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    db.increment_stat(user_id, "exercises_count")
+    
     keyboard = [
         ['🙏 Три благодарности'],
         ['🌍 Заземление'],
@@ -220,89 +184,98 @@ async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-async def handle_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = random.choice(SUPPORT_MESSAGES)
-    await update.message.reply_text(message)
-
-async def handle_emergency(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    emergency_text = """
-🆘 **Если вам нужна помощь прямо сейчас:**
-
-📞 **Горячие линии (24/7):**
-• **8-800-2000-122** — Единый телефон доверия
-• **112** — Экстренные службы
-
-💙 Помните: обратиться за помощью — это правильно.
-"""
-    await update.message.reply_text(emergency_text)
-
-async def handle_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    about_text = """
-ℹ️ **О боте психологической поддержки**
-
-**Что умеет бот:**
-• 🤖 **ИИ-помощник** — осмысленный диалог с нейросетью
-• 🧘 **Медитации** — практики осознанности
-• 📝 **Упражнения** — психологические техники
-• 💬 **Поддержка** — ободряющие сообщения
-• 📓 **Дневник** — сохранение мыслей
-
-**Технологии:** Python + DeepSeek AI + Render + UptimeRobot
-
-**Важно:** Я не заменяю профессионального психолога.
-"""
-    await update.message.reply_text(about_text)
-
 async def handle_diary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
     context.user_data['diary_mode'] = True
     await update.message.reply_text(
-        "📓 **Дневник настроения**\n\n"
-        "Напишите, что вы чувствуете сейчас...\n"
-        "Чтобы выйти, отправьте /cancel",
+        "📓 **Дневник**\n\nНапишите, что чувствуете. /cancel для выхода",
         parse_mode="Markdown"
+    )
+
+async def handle_diary_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.user_data.get('diary_mode'):
+        return False
+    
+    user_id = update.effective_user.id
+    entry = update.message.text
+    
+    db.add_diary_entry(user_id, entry)
+    db.increment_stat(user_id, "total_messages")
+    
+    await update.message.reply_text("✅ Запись сохранена в дневнике!")
+    return True
+
+async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    
+    stats = db.get_stats(user_id)
+    if stats:
+        stats_text = f"""
+📊 **Ваша статистика:**
+
+🧘 Медитаций: {stats['meditations_count']}
+📝 Упражнений: {stats['exercises_count']}
+💬 Сообщений ИИ: {stats['ai_messages_count']}
+📨 Всего сообщений: {stats['total_messages']}
+
+🌟 Продолжайте заботиться о себе!
+"""
+        await update.message.reply_text(stats_text, parse_mode="Markdown")
+    else:
+        await update.message.reply_text("Статистика пока пуста. Начните практиковать!")
+
+async def handle_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    await update.message.reply_text(random.choice(SUPPORT_MESSAGES))
+
+async def handle_emergency(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🆘 Телефон доверия: 8-800-2000-122 (24/7)\n112 — экстренные службы"
+    )
+
+async def handle_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "ℹ️ Бот психологической поддержки с ИИ.\n"
+        "Технологии: Python + DeepSeek + Render\n"
+        "База данных: SQLite"
     )
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('ai_mode'):
         context.user_data['ai_mode'] = False
-        await update.message.reply_text(
-            "Режим ИИ завершён. Возвращаюсь в главное меню.",
-            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
-        )
+        await update.message.reply_text("Режим ИИ завершён.", reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True))
     elif context.user_data.get('diary_mode'):
         context.user_data['diary_mode'] = False
-        await update.message.reply_text(
-            "Режим дневника завершён.",
-            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
-        )
+        await update.message.reply_text("Режим дневника завершён.", reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True))
     else:
         await update.message.reply_text("Нет активных режимов для отмены.")
 
-# ============ ГЛАВНЫЙ ОБРАБОТЧИК ============
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     
-    # Сначала проверяем режим ИИ (если активен)
     if context.user_data.get('ai_mode'):
         await handle_ai_message(update, context)
         return
     
-    # Режим дневника
     if context.user_data.get('diary_mode'):
-        await update.message.reply_text("✅ Запись сохранена в дневнике.")
+        await handle_diary_message(update, context)
         return
     
-    # Обработка кнопок
     if text == "🤖 Поговорить с ИИ":
         await handle_ai_chat(update, context)
     elif text == "🧘 Медитация":
         await handle_meditation(update, context)
     elif text == "📝 Упражнение":
         await handle_exercise(update, context)
-    elif text == "💬 Поддержка":
-        await handle_support(update, context)
     elif text == "📓 Дневник":
         await handle_diary(update, context)
+    elif text == "📊 Статистика":
+        await handle_stats(update, context)
+    elif text == "💬 Поддержка":
+        await handle_support(update, context)
     elif text == "🆘 Помощь":
         await handle_emergency(update, context)
     elif text == "ℹ️ О боте":
@@ -318,16 +291,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🌍 Заземление":
         await update.message.reply_text(EXERCISES["grounding"])
     else:
-        await update.message.reply_text(
-            "Используйте кнопки меню для навигации.\n\n"
-            "🤖 **Поговорить с ИИ** — живой диалог с нейросетью\n"
-            "🧘 **Медитация** — практики осознанности\n"
-            "📝 **Упражнение** — психологические техники\n"
-            "💬 **Поддержка** — ободряющие сообщения",
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text("Используйте кнопки меню.")
 
-# ============ ЗАПУСК ============
 def main():
     token = "8516115766:AAFhchBI9paY9KMDeT9WppKoEXshWtt67qE"
     
@@ -335,20 +300,16 @@ def main():
         logger.error("Токен не найден!")
         return
     
-    # Запускаем Flask
     flask_thread = Thread(target=run_flask, daemon=True)
     flask_thread.start()
     logger.info("Веб-сервер запущен")
     
-    # Создаём приложение
     app = Application.builder().token(token).build()
-    
-    # Регистрируем обработчики
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    logger.info("✅ Бот с ИИ запущен!")
+    logger.info("✅ Бот с ИИ и базой данных запущен!")
     app.run_polling()
 
 if __name__ == "__main__":
