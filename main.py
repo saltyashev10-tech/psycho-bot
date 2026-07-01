@@ -41,7 +41,6 @@ main_keyboard = [
 
 # ============ КОНТЕНТ ============
 MEDITATIONS = {
-    # === Основные (оставляем для обратной совместимости) ===
     "breathing": """
 🌬️ **Дыхательная техника "4-7-8"**
 
@@ -62,8 +61,6 @@ MEDITATIONS = {
 
 💡 Просто будьте в настоящем моменте.
 """,
-
-    # === 10 НОВЫХ МЕДИТАЦИЙ ===
     "ocean_breath": """
 🌊 **Дыхание океана**
 
@@ -213,7 +210,6 @@ MEDITATIONS = {
 }
 
 EXERCISES = {
-    # === Основные (оставляем для обратной совместимости) ===
     "gratitude": """
 🙏 **Три благодарности**
 
@@ -236,8 +232,6 @@ EXERCISES = {
 
 💙 Помогает при тревоге и панических атаках.
 """,
-
-    # === 10 НОВЫХ УПРАЖНЕНИЙ ===
     "success_diary": """
 📋 **Дневник успеха**
 
@@ -317,10 +311,7 @@ EXERCISES = {
 
 📋 **Инструкция:**
 1. Запишите 2-3 убеждения, которые вас ограничивают
-   • Например: "Я не справлюсь", "Мне всё равно"
-2. Перепишите их в поддерживающие:
-   • "Я справляюсь шаг за шагом"
-   • "Я делаю всё, что в моих силах"
+2. Перепишите их в поддерживающие
 3. Повторите новые фразы 3 раза вслух
 4. Почувствуйте, как они звучат внутри вас
 
@@ -384,7 +375,6 @@ EXERCISES = {
 """,
 }
 
-# ============ ПОДДЕРЖКА ============
 SUPPORT_MESSAGES = [
     "✨ Ты уже сделал(а) большой шаг, обратившись за поддержкой. Это проявление силы!",
     "💚 Твои чувства важны. Спасибо, что делишься ими.",
@@ -396,7 +386,6 @@ SUPPORT_MESSAGES = [
     "💪 Просить помощи — это не слабость, а мудрость.",
 ]
 
-# ============ СИСТЕМНЫЙ ПРОМПТ ДЛЯ ИИ ============
 SYSTEM_PROMPT = """
 Ты — добрый и эмпатичный виртуальный друг по имени ПсихоBot. 
 Твоя задача — быть внимательным слушателем и собеседником.
@@ -420,7 +409,6 @@ SYSTEM_PROMPT = """
 Важно: Ты не врач и не психотерапевт. Если человек говорит о суицидальных мыслях — мягко предложи обратиться к специалисту и дай телефон доверия 8-800-2000-122.
 """
 
-# ============ ХРАНИЛИЩЕ ДИАЛОГОВ ============
 user_conversations = {}
 
 # ============ ОБРАБОТЧИКИ КОМАНД ============
@@ -428,47 +416,21 @@ user_conversations = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
-    
     db.add_user(user_id, user.username, user.first_name, user.last_name)
     db.update_last_active(user_id)
-    
-    welcome_text = f"""
-👋 Привет, {user.first_name}!
-
-Я ПсихоBot — твой виртуальный друг и собеседник. 
-Я здесь, чтобы выслушать тебя, поддержать и помочь разобраться в том, что тебя беспокоит.
-
-💬 **Просто поговорить** — расскажи мне всё, что у тебя на душе
-🧘 **Медитация** — короткие практики для спокойствия
-📝 **Упражнение** — техники для ясности ума
-📓 **Дневник** — запиши свои мысли
-📊 **Статистика** — посмотри свой прогресс
-
-Я всегда рядом, чтобы выслушать. Ты можешь говорить со мной о чём угодно. 💙
-"""
-    
     await update.message.reply_text(
-        welcome_text,
+        f"👋 Привет, {user.first_name}! Я ПсихоBot — твой виртуальный друг и собеседник. Я здесь, чтобы выслушать тебя, поддержать и помочь разобраться в том, что тебя беспокоит.",
         reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
 async def premium_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Информация о премиум-подписке"""
     user_id = update.effective_user.id
     sub = db.get_user_subscription(user_id)
     is_premium = sub and sub['subscription_status'] == 'premium'
-    
     if is_premium:
-        expires = sub['subscription_expires_at']
-        await update.message.reply_text(
-            f"🌟 Ты уже с нами в **ПсихоBot+**!\n\n"
-            f"Действует до: {expires}\n"
-            f"Спасибо, что заботишься о себе! 💙",
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text(f"🌟 Ты уже с нами в **ПсихоBot+**!\n\nДействует до: {sub['subscription_expires_at']}\nСпасибо, что заботишься о себе! 💙", parse_mode="Markdown")
         return
-    
     premium_text = """
 🌟 **ПсихоBot+ — подписка на заботу о себе**
 
@@ -482,24 +444,16 @@ async def premium_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🎵 **Звуки природы** — для расслабления и сна
 
 **Стоимость: 50⭐ / месяц**
-
-**Как оплатить:**
-1. Напиши /subscribe
-2. Оплата через Telegram Stars
-3. Доступ открывается мгновенно 💙
 """
     await update.message.reply_text(premium_text, parse_mode="Markdown")
 
 async def send_subscription_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Отправляет счёт на оплату подписки через Telegram Stars"""
     user_id = update.effective_user.id
     sub = db.get_user_subscription(user_id)
     if sub and sub['subscription_status'] == 'premium':
         await update.message.reply_text("🌟 У тебя уже есть подписка! Спасибо, что с нами 💙")
         return
-
     payload = f"sub_month_{user_id}_{datetime.now().timestamp()}"
-
     try:
         await update.message.reply_invoice(
             title="ПсихоBot+ (1 месяц)",
@@ -514,122 +468,74 @@ async def send_subscription_invoice(update: Update, context: ContextTypes.DEFAUL
             need_email=False,
             is_flexible=False,
         )
-        logger.info(f"Счёт отправлен пользователю {user_id}")
     except Exception as e:
         logger.error(f"Ошибка при отправке счёта: {e}")
-        await update.message.reply_text(
-            "Извините, произошла ошибка при создании счёта. Попробуйте позже."
-        )
+        await update.message.reply_text("Извините, произошла ошибка при создании счёта. Попробуйте позже.")
 
 async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Команда для оформления подписки — отправляет счёт"""
     await send_subscription_invoice(update, context)
 
 async def pre_checkout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка предварительной проверки платежа"""
     query = update.pre_checkout_query
     user_id = query.from_user.id
-    
     sub = db.get_user_subscription(user_id)
     if sub and sub['subscription_status'] == 'premium':
         await query.answer(ok=False, error_message="У вас уже активна подписка!")
         return
-    
     payload = query.invoice_payload
     if not payload or not payload.startswith("sub_month_"):
         await query.answer(ok=False, error_message="Неверный запрос. Попробуйте ещё раз.")
         return
-    
     await query.answer(ok=True)
 
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка успешной оплаты подписки"""
     user_id = update.effective_user.id
     payment_info = update.message.successful_payment
-    
     expires_at = (datetime.now() + timedelta(days=30)).isoformat()
     db.set_subscription(user_id, 'premium', expires_at)
-    
     await update.message.reply_text(
-        f"🎉 **Подписка ПсихоBot+ успешно активирована!**\n\n"
-        f"Мы получили твой платёж {payment_info.total_amount // 100}⭐️.\n"
-        f"Подписка активна до: {expires_at}\n\n"
-        f"Теперь ты можешь:\n"
-        f"💬 Общаться безлимитно\n"
-        f"🧠 Бот будет помнить всё, что ты рассказываешь\n"
-        f"📓 Анализировать записи в дневнике\n\n"
-        f"Спасибо, что выбрал заботу о себе! 💙",
+        f"🎉 **Подписка ПсихоBot+ успешно активирована!**\n\nМы получили твой платёж {payment_info.total_amount // 100}⭐️.\nПодписка активна до: {expires_at}\n\nСпасибо, что выбрал заботу о себе! 💙",
         parse_mode="Markdown"
     )
-    
-    logger.info(f"User {user_id} bought subscription for {payment_info.total_amount // 100} Stars. Payload: {payment_info.invoice_payload}")
+    logger.info(f"User {user_id} bought subscription for {payment_info.total_amount // 100} Stars.")
 
 async def activate_premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Временная команда для активации подписки (только для теста)"""
     user_id = update.effective_user.id
-    
     db.add_user(user_id)
     expires_at = (datetime.now() + timedelta(days=30)).isoformat()
     db.set_subscription(user_id, 'premium', expires_at)
-    
     await update.message.reply_text(
-        "🎉 **Подписка ПсихоBot+ активирована!**\n\n"
-        "Теперь ты можешь:\n"
-        "💬 Общаться безлимитно\n"
-        "🧠 Бот будет помнить всё, что ты рассказываешь\n"
-        "📓 Анализировать записи в дневнике\n\n"
-        "Спасибо, что выбрал заботу о себе! 💙",
+        "🎉 **Подписка ПсихоBot+ активирована!**\n\nТеперь ты можешь:\n💬 Общаться безлимитно\n🧠 Бот будет помнить всё, что ты рассказываешь\n📓 Анализировать записи в дневнике\n\nСпасибо, что выбрал заботу о себе! 💙",
         parse_mode="Markdown"
     )
 
 async def my_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показывает статус подписки и остаток сообщений"""
     user_id = update.effective_user.id
-    
     sub = db.get_user_subscription(user_id)
     is_premium = sub and sub['subscription_status'] == 'premium'
-    
     if is_premium:
-        await update.message.reply_text(
-            f"🌟 **Ты в ПсихоBot+**\n\n"
-            f"Действует до: {sub['subscription_expires_at']}\n"
-            "💬 Лимит: безлимитный"
-        )
+        await update.message.reply_text(f"🌟 **Ты в ПсихоBot+**\n\nДействует до: {sub['subscription_expires_at']}\n💬 Лимит: безлимитный")
     else:
         remaining = db.get_remaining_messages(user_id)
         await update.message.reply_text(
-            f"📊 **Твой статус:** Бесплатный\n\n"
-            f"Осталось сообщений сегодня: **{remaining}** из 20\n\n"
-            f"Подпишись на **ПсихоBot+**, чтобы:\n"
-            f"✅ Убрать лимиты\n"
-            f"✅ Получить долгосрочную память\n"
-            f"✅ Получить персональные рекомендации\n\n"
-            f"Узнать больше: /premium",
+            f"📊 **Твой статус:** Бесплатный\n\nОсталось сообщений сегодня: **{remaining}** из 20\n\nПодпишись на **ПсихоBot+**, чтобы:\n✅ Убрать лимиты\n✅ Получить долгосрочную память\n✅ Получить персональные рекомендации\n\nУзнать больше: /premium",
             parse_mode="Markdown"
         )
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('free_talk_mode'):
         context.user_data['free_talk_mode'] = False
-        await update.message.reply_text(
-            "💙 Я всегда здесь, если захочешь поговорить снова.",
-            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
-        )
+        await update.message.reply_text("💙 Я всегда здесь, если захочешь поговорить снова.", reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True))
     elif context.user_data.get('diary_mode'):
         context.user_data['diary_mode'] = False
-        await update.message.reply_text(
-            "📓 Записи сохранены.",
-            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
-        )
+        await update.message.reply_text("📓 Записи сохранены.", reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True))
     else:
         await update.message.reply_text("Нет активных режимов для отмены.")
 
 # ============ ОСНОВНЫЕ ФУНКЦИИ ============
 
 async def ask_deepseek_with_context(user_message: str, history: list, user_info: str = "") -> str:
-    """Запрос к DeepSeek с контекстом дружеского разговора"""
     api_key = os.getenv("DEEPSEEK_API_KEY")
-    
     if not api_key:
         return random.choice([
             "Я слышу тебя. Расскажи мне больше о том, что ты чувствуешь.",
@@ -638,31 +544,18 @@ async def ask_deepseek_with_context(user_message: str, history: list, user_info:
             "Ты очень смелый(ая), что говоришь об этом. Я здесь, чтобы поддержать тебя.",
             "Расскажи, что происходит у тебя внутри. Я внимательно слушаю.",
         ])
-    
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    
     if user_info:
         messages.append({"role": "system", "content": f"Информация о пользователе: {user_info}"})
-    
     for msg in history[-10:]:
         messages.append(msg)
-    
     messages.append({"role": "user", "content": user_message})
-    
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "messages": messages,
-                    "temperature": 0.8,
-                    "max_tokens": 600
-                },
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": "deepseek-chat", "messages": messages, "temperature": 0.8, "max_tokens": 600},
                 timeout=30
             ) as response:
                 if response.status == 200:
@@ -678,91 +571,54 @@ async def ask_deepseek_with_context(user_message: str, history: list, user_info:
         return "Я здесь, я слушаю тебя. Расскажи, что у тебя на душе."
 
 async def handle_free_talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Начало свободного разговора с ИИ"""
     user_id = update.effective_user.id
     db.update_last_active(user_id)
-    
     if user_id in user_conversations:
         user_conversations[user_id] = []
-    
     context.user_data['free_talk_mode'] = True
-    
     await update.message.reply_text(
-        "💬 **Я слушаю тебя.**\n\n"
-        "Расскажи мне всё, что у тебя на душе.\n"
-        "Я здесь, чтобы выслушать, поддержать и помочь.\n\n"
-        "Можешь говорить о чём угодно:\n"
-        "• что тебя беспокоит\n"
-        "• что радует или огорчает\n"
-        "• твои мысли и чувства\n"
-        "• просто о том, как прошёл твой день\n\n"
-        "Чтобы выйти из режима разговора, отправь /cancel",
+        "💬 **Я слушаю тебя.**\n\nРасскажи мне всё, что у тебя на душе.\nЯ здесь, чтобы выслушать, поддержать и помочь.\n\nМожешь говорить о чём угодно:\n• что тебя беспокоит\n• что радует или огорчает\n• твои мысли и чувства\n• просто о том, как прошёл твой день\n\nЧтобы выйти из режима разговора, отправь /cancel",
         parse_mode="Markdown"
     )
 
 async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка сообщений в режиме разговора с проверкой лимита"""
     if not context.user_data.get('free_talk_mode'):
         return False
-    
     user_id = update.effective_user.id
     user_message = update.message.text
-    
     if user_message.lower() in ['/cancel', 'выход', 'выйти']:
         context.user_data['free_talk_mode'] = False
-        await update.message.reply_text(
-            "💙 Я всегда здесь, если захочешь поговорить снова.",
-            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
-        )
+        await update.message.reply_text("💙 Я всегда здесь, если захочешь поговорить снова.", reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True))
         return True
-    
-    # ===== ПРОВЕРКА ЛИМИТА =====
     if not db.can_send_message(user_id):
         remaining = db.get_remaining_messages(user_id)
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌟 Купить подписку", callback_data="buy_subscription")]
-        ])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🌟 Купить подписку", callback_data="buy_subscription")]])
         await update.message.reply_text(
-            f"💙 Сегодня ты уже использовал(а) все {20 - remaining} бесплатных сообщений.\n\n"
-            f"Чтобы продолжать разговор без ограничений, оформи подписку **ПсихоBot+**.\n\n"
-            f"С подпиской ты получишь:\n"
-            f"✅ Безлимитные разговоры\n"
-            f"✅ Долгосрочную память\n"
-            f"✅ Персональные рекомендации\n\n"
-            f"Нажми на кнопку ниже, чтобы оформить подписку 👇",
+            f"💙 Сегодня ты уже использовал(а) все {20 - remaining} бесплатных сообщений.\n\nЧтобы продолжать разговор без ограничений, оформи подписку **ПсихоBot+**.\n\nС подпиской ты получишь:\n✅ Безлимитные разговоры\n✅ Долгосрочную память\n✅ Персональные рекомендации\n\nНажми на кнопку ниже, чтобы оформить подписку 👇",
             parse_mode="Markdown",
             reply_markup=keyboard
         )
         return True
-    
     db.increment_daily_usage(user_id)
     db.update_last_active(user_id)
     db.increment_stat(user_id, "total_messages")
     db.increment_stat(user_id, "ai_messages_count")
-    
     await update.message.chat.send_action(action="typing")
-    
     history = user_conversations.get(user_id, [])
     user = update.effective_user
     user_info = f"Меня зовут {user.first_name}."
-    
     response = await ask_deepseek_with_context(user_message, history, user_info)
-    
     history.append({"role": "user", "content": user_message})
     history.append({"role": "assistant", "content": response})
     user_conversations[user_id] = history[-20:]
-    
     db.add_ai_message(user_id, "user", user_message)
     db.add_ai_message(user_id, "assistant", response)
-    
     await update.message.reply_text(response)
     return True
 
 async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка нажатий на инлайн-кнопки"""
     query = update.callback_query
     await query.answer()
-    
     if query.data == "buy_subscription":
         await send_subscription_invoice(query.message, context)
 
@@ -770,7 +626,6 @@ async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db.update_last_active(user_id)
     db.increment_stat(user_id, "meditations_count")
-    
     keyboard = [
         ['🌬️ Дыхание 4-7-8', '🧘 Осознанность'],
         ['🌊 Дыхание океана', '🔥 Внутренний свет'],
@@ -790,7 +645,6 @@ async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db.update_last_active(user_id)
     db.increment_stat(user_id, "exercises_count")
-    
     keyboard = [
         ['🙏 Три благодарности', '🌍 Заземление'],
         ['📋 Дневник успеха', '🔍 Наблюдатель'],
@@ -799,3 +653,164 @@ async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ['🌳 Мои корни', '🎨 Творческий поток'],
         ['🛡️ Мои границы', '🏆 Моя ценность'],
         ['🔙 Главное меню']
+    ]
+    await update.message.reply_text(
+        "📝 **Выбери упражнение для ясности ума:**",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+        parse_mode="Markdown"
+    )
+
+async def handle_diary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    context.user_data['diary_mode'] = True
+    await update.message.reply_text(
+        "📓 **Твой личный дневник**\n\nНапиши всё, что хочешь сохранить.\nЭто только для тебя.\n\nОтправь /cancel чтобы выйти из режима дневника.",
+        parse_mode="Markdown"
+    )
+
+async def handle_diary_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.user_data.get('diary_mode'):
+        return False
+    user_id = update.effective_user.id
+    entry = update.message.text
+    db.add_diary_entry(user_id, entry)
+    db.increment_stat(user_id, "total_messages")
+    await update.message.reply_text("✅ Запись сохранена.\n\nПродолжай писать или отправь /cancel чтобы выйти.")
+    return True
+
+async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    stats = db.get_stats(user_id)
+    if stats:
+        await update.message.reply_text(
+            f"📊 **Твоя статистика:**\n\n💬 Разговоров со мной: {stats['ai_messages_count']}\n🧘 Медитаций: {stats['meditations_count']}\n📝 Упражнений: {stats['exercises_count']}\n📨 Всего сообщений: {stats['total_messages']}\n\n🌟 Ты молодец! Продолжай заботиться о себе.",
+            parse_mode="Markdown"
+        )
+    else:
+        await update.message.reply_text("📊 Статистика пока пуста.\n\nНачни разговор со мной — и мы создадим твою историю вместе! 💙")
+
+async def handle_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    db.update_last_active(user_id)
+    await update.message.reply_text(random.choice(SUPPORT_MESSAGES))
+
+async def handle_emergency(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🆘 **Если тебе нужна помощь прямо сейчас:**\n\n📞 **Телефоны доверия (24/7):**\n• **8-800-2000-122** — Единый телефон доверия\n• **112** — Экстренные службы\n\n💙 **Помни:** обратиться за помощью — это правильно и ответственно.\n\nЯ здесь, чтобы поддержать тебя в любое время. 💚"
+    )
+
+async def handle_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "💙 **Обо мне**\n\nЯ ПсихоBot — твой виртуальный друг и собеседник.\n\n**Что я умею:**\n• 💬 Слушать и поддерживать в любой ситуации\n• 🧘 Помогать успокоиться с помощью медитаций\n• 📝 Предлагать упражнения для ясности ума\n• 📓 Сохранять твои мысли в личном дневнике\n• 📊 Показывать твой прогресс\n\n**Важно:** Я не заменяю профессионального психолога. Если тебе тяжело — пожалуйста, обратись к специалисту.\n\nЯ всегда рядом. Ты не один. 💚"
+    )
+
+# ============ ГЛАВНЫЙ ОБРАБОТЧИК ============
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if context.user_data.get('free_talk_mode'):
+        await handle_ai_response(update, context)
+        return
+    if context.user_data.get('diary_mode'):
+        await handle_diary_message(update, context)
+        return
+    if text == "💬 Просто поговорить":
+        await handle_free_talk(update, context)
+    elif text == "🧘 Медитация":
+        await handle_meditation(update, context)
+    elif text == "📝 Упражнение":
+        await handle_exercise(update, context)
+    elif text == "📓 Дневник":
+        await handle_diary(update, context)
+    elif text == "📊 Статистика":
+        await handle_stats(update, context)
+    elif text == "💬 Поддержка":
+        await handle_support(update, context)
+    elif text == "🆘 Помощь":
+        await handle_emergency(update, context)
+    elif text == "ℹ️ О боте":
+        await handle_about(update, context)
+    elif text == "🔙 Главное меню":
+        await start(update, context)
+    elif text == "🌬️ Дыхание 4-7-8":
+        await update.message.reply_text(MEDITATIONS["breathing"])
+    elif text == "🧘 Осознанность":
+        await update.message.reply_text(MEDITATIONS["mindfulness"])
+    elif text == "🌊 Дыхание океана":
+        await update.message.reply_text(MEDITATIONS["ocean_breath"])
+    elif text == "🔥 Внутренний свет":
+        await update.message.reply_text(MEDITATIONS["inner_light"])
+    elif text == "🌿 Лесная прогулка":
+        await update.message.reply_text(MEDITATIONS["forest_walk"])
+    elif text == "✨ Прощение себя":
+        await update.message.reply_text(MEDITATIONS["self_forgiveness"])
+    elif text == "💎 Ценность момента":
+        await update.message.reply_text(MEDITATIONS["moment_value"])
+    elif text == "🌈 Радуга эмоций":
+        await update.message.reply_text(MEDITATIONS["rainbow_emotions"])
+    elif text == "☀️ Утреннее солнце":
+        await update.message.reply_text(MEDITATIONS["morning_sun"])
+    elif text == "🌙 Лунная ночь":
+        await update.message.reply_text(MEDITATIONS["night_moon"])
+    elif text == "🌺 Открытое сердце":
+        await update.message.reply_text(MEDITATIONS["open_heart"])
+    elif text == "🎯 Центрирование":
+        await update.message.reply_text(MEDITATIONS["centering"])
+    elif text == "🙏 Три благодарности":
+        await update.message.reply_text(EXERCISES["gratitude"])
+    elif text == "🌍 Заземление":
+        await update.message.reply_text(EXERCISES["grounding"])
+    elif text == "📋 Дневник успеха":
+        await update.message.reply_text(EXERCISES["success_diary"])
+    elif text == "🔍 Наблюдатель":
+        await update.message.reply_text(EXERCISES["observer"])
+    elif text == "🤗 Объятие себя":
+        await update.message.reply_text(EXERCISES["self_hug"])
+    elif text == "💭 Смена фокуса":
+        await update.message.reply_text(EXERCISES["focus_shift"])
+    elif text == "📅 Планирование радости":
+        await update.message.reply_text(EXERCISES["joy_planning"])
+    elif text == "💪 Сила слова":
+        await update.message.reply_text(EXERCISES["power_words"])
+    elif text == "🌳 Мои корни":
+        await update.message.reply_text(EXERCISES["my_roots"])
+    elif text == "🎨 Творческий поток":
+        await update.message.reply_text(EXERCISES["creative_flow"])
+    elif text == "🛡️ Мои границы":
+        await update.message.reply_text(EXERCISES["my_boundaries"])
+    elif text == "🏆 Моя ценность":
+        await update.message.reply_text(EXERCISES["my_value"])
+    else:
+        await update.message.reply_text(
+            "💬 Я всегда рад поговорить с тобой.\n\nНажми **'💬 Просто поговорить'**, чтобы начать разговор.\nИли выбери другую функцию из меню.\n\nТы не один. 💙",
+            parse_mode="Markdown"
+        )
+
+# ============ ЗАПУСК ============
+
+def main():
+    token = "8516115766:AAFhchBI9paY9KMDeT9WppKoEXshWtt67qE"
+    if not token:
+        logger.error("Токен не найден!")
+        return
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    logger.info("Веб-сервер запущен")
+    app = Application.builder().token(token).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cancel", cancel))
+    app.add_handler(CommandHandler("premium", premium_info))
+    app.add_handler(CommandHandler("subscribe", subscribe))
+    app.add_handler(CommandHandler("activate_premium", activate_premium))
+    app.add_handler(CommandHandler("status", my_status))
+    app.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
+    app.add_handler(CallbackQueryHandler(callback_query_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    logger.info("✅ ПсихоBot — виртуальный друг с подпиской через Telegram Stars и расширенным контентом запущен!")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
