@@ -19,7 +19,7 @@ class Database:
     def create_tables(self):
         cursor = self.conn.cursor()
         
-        # Таблица пользователей (добавляем subscription_status)
+        # Таблица пользователей
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -80,6 +80,19 @@ class Database:
             )
         """)
         
+        # Таблица настроек пользователя (для уведомлений)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_settings (
+                user_id INTEGER PRIMARY KEY,
+                morning_enabled INTEGER DEFAULT 1,
+                midday_enabled INTEGER DEFAULT 1,
+                evening_enabled INTEGER DEFAULT 1,
+                reminder_enabled INTEGER DEFAULT 1,
+                timezone TEXT DEFAULT 'Europe/Moscow',
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        """)
+        
         self.conn.commit()
         logger.info("Все таблицы созданы")
     
@@ -96,6 +109,11 @@ class Database:
                 INSERT OR IGNORE INTO stats (user_id, meditations_count, exercises_count, ai_messages_count, total_messages)
                 VALUES (?, 0, 0, 0, 0)
             """, (user_id,))
+            # Создаём настройки по умолчанию
+            cursor.execute("""
+                INSERT OR IGNORE INTO user_settings (user_id, morning_enabled, midday_enabled, evening_enabled, reminder_enabled)
+                VALUES (?, 1, 1, 1, 1)
+            """, (user_id,))
         
         self.conn.commit()
     
@@ -108,7 +126,6 @@ class Database:
         self.conn.commit()
     
     def get_user_subscription(self, user_id):
-        """Получает статус подписки пользователя"""
         cursor = self.conn.cursor()
         cursor.execute("""
             SELECT subscription_status, subscription_expires_at FROM users
@@ -117,7 +134,6 @@ class Database:
         return cursor.fetchone()
     
     def set_subscription(self, user_id, status, expires_at=None):
-        """Устанавливает статус подписки"""
         cursor = self.conn.cursor()
         cursor.execute("""
             UPDATE users 
@@ -128,7 +144,6 @@ class Database:
     
     # ===== Дневное использование (лимиты) =====
     def get_daily_usage(self, user_id):
-        """Получает количество сообщений пользователя за сегодня"""
         today = date.today().isoformat()
         cursor = self.conn.cursor()
         cursor.execute("""
@@ -139,7 +154,6 @@ class Database:
         return row['messages_count'] if row else 0
     
     def increment_daily_usage(self, user_id):
-        """Увеличивает счётчик сообщений за сегодня"""
         today = date.today().isoformat()
         cursor = self.conn.cursor()
         cursor.execute("""
@@ -152,30 +166,20 @@ class Database:
     
     # ===== Проверка лимита =====
     def can_send_message(self, user_id):
-        """Проверяет, может ли пользователь отправить сообщение"""
-        # Получаем статус подписки
         sub = self.get_user_subscription(user_id)
         if not sub:
-            return True  # Если пользователя нет в БД — разрешаем
-        
+            return True
         status = sub['subscription_status']
-        
-        # Премиум-пользователи без ограничений
         if status == 'premium':
             return True
-        
-        # Бесплатные пользователи — проверяем лимит
         daily_messages = self.get_daily_usage(user_id)
-        FREE_LIMIT = 20  # 20 сообщений в день
-        
+        FREE_LIMIT = 20
         return daily_messages < FREE_LIMIT
     
     def get_remaining_messages(self, user_id):
-        """Возвращает оставшееся количество сообщений на сегодня"""
         sub = self.get_user_subscription(user_id)
         if sub and sub['subscription_status'] == 'premium':
-            return -1  # Бесконечность
-        
+            return -1
         daily_messages = self.get_daily_usage(user_id)
         FREE_LIMIT = 20
         remaining = FREE_LIMIT - daily_messages
@@ -236,6 +240,41 @@ class Database:
         """, (user_id, limit))
         return list(reversed(cursor.fetchall()))
     
+    # ===== Настройки пользователя (для уведомлений) =====
+    def get_user_settings(self, user_id):
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT morning_enabled, midday_enabled, evening_enabled, reminder_enabled, timezone
+            FROM user_settings
+            WHERE user_id = ?
+        """, (user_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            cursor.execute("""
+                INSERT INTO user_settings (user_id, morning_enabled, midday_enabled, evening_enabled, reminder_enabled, timezone)
+                VALUES (?, 1, 1, 1, 1, 'Europe/Moscow')
+            """, (user_id,))
+            self.conn.commit()
+            return {'morning_enabled': 1, 'midday_enabled': 1, 'evening_enabled': 1, 'reminder_enabled': 1, 'timezone': 'Europe/Moscow'}
+        
+        return dict(row)
+    
+    def update_user_settings(self, user_id, **kwargs):
+        cursor = self.conn.cursor()
+        for key, value in kwargs.items():
+            cursor.execute(f"""
+                UPDATE user_settings SET {key} = ? WHERE user_id = ?
+            """, (value, user_id))
+        self.conn.commit()
+    
+    # ===== Получение всех пользователей =====
+    def get_all_users(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT user_id FROM users")
+        return cursor.fetchall()
+    
+    # ===== Закрытие =====
     def close(self):
         if self.conn:
             self.conn.close()
