@@ -9,6 +9,7 @@ import aiohttp
 import asyncio
 from database import Database
 from datetime import datetime, timedelta
+import pytz
 
 # Настройка логирования
 logging.basicConfig(
@@ -36,7 +37,8 @@ main_keyboard = [
     ['💬 Просто поговорить'],
     ['🧘 Медитация', '📝 Упражнение'],
     ['📓 Дневник', '📊 Статистика'],
-    ['🆘 Помощь', 'ℹ️ О боте']
+    ['⏰ Напоминания', '🆘 Помощь'],
+    ['ℹ️ О боте']
 ]
 
 # ============ КОНТЕНТ ============
@@ -375,6 +377,7 @@ EXERCISES = {
 """,
 }
 
+# ============ ПОДДЕРЖКА ============
 SUPPORT_MESSAGES = [
     "✨ Ты уже сделал(а) большой шаг, обратившись за поддержкой. Это проявление силы!",
     "💚 Твои чувства важны. Спасибо, что делишься ими.",
@@ -386,6 +389,45 @@ SUPPORT_MESSAGES = [
     "💪 Просить помощи — это не слабость, а мудрость.",
 ]
 
+# ============ УТРЕННИЕ И ВЕЧЕРНИЕ СООБЩЕНИЯ ============
+MORNING_MESSAGES = [
+    "🌅 Доброе утро! 🌅\n\nКаким ты хочешь сделать этот день? Что ты можешь сделать уже сегодня, чтобы позаботиться о себе? 💙",
+    "☀️ С добрым утром!\n\nСегодня — новый день, новая страница. Напиши что-то доброе себе в дневнике, чтобы начать день с заботы о себе. ✨",
+    "🌤️ Утро — время возможностей.\n\nЧем ты хочешь наполнить этот день? 🌸\n\nЯ здесь, чтобы поддержать тебя в любом твоём выборе.",
+    "🌿 Доброе утро!\n\nКак ты себя чувствуешь сегодня? Позволь себе замечать свои эмоции без осуждения. 💙",
+    "☕️ Утро — лучшее время для добрых слов себе.\n\nСкажи себе: «Я справлюсь, я сделаю этот день хорошим». И поверь в это. 🌟",
+]
+
+EVENING_MESSAGES = [
+    "🌙 Добрый вечер!\n\nЧто хорошего случилось с тобой сегодня? Даже маленькие радости важны. 💫",
+    "🌟 Вечер — время подвести итоги дня.\n\nЧто тебе сегодня помогло? А что было трудным? Благодари себя за каждый шаг. 💚",
+    "🌌 Как прошёл твой день?\n\nЕсли хочешь, расскажи мне о нём. Я всегда готов(а) выслушать. 💙",
+    "💭 Вечерняя рефлексия:\n\nЧто бы ты хотел(а) оставить в этом дне, а что — отпустить?\n\nПозволь себе быть честным(ой) с собой. 🍃",
+    "🌜 Ты сделал(а) всё, что мог(ла) сегодня. Ты достаточно хорош(а).\n\nОтдыхай, завтра будет новый день. 💤",
+]
+
+MIDDAY_MESSAGES = [
+    "☀️ Добрый день!\n\nКак ты себя чувствуешь в середине дня? Сделай паузу, вдохни и выдохни. Ты справляешься. 💪",
+    "🌸 Среди дня — отличный момент, чтобы напомнить себе: ты важен(на).\n\nКак прошла твоя первая половина дня?",
+    "🌻 Привет! Напоминаю: ты можешь сделать короткую медитацию или просто подышать.\n\nЗабота о себе — это сила. 💙",
+    "🌳 День в разгаре.\n\nКак ты сейчас? Если чувствуешь усталость — сделай перерыв, выпей воды, дыши. Ты заслуживаешь отдыха.",
+]
+
+REMINDER_MESSAGES = [
+    "🧘 Напоминаю: ты давно не практиковал(а) медитацию. Возможно, сейчас — подходящий момент, чтобы уделить себе 3 минуты спокойствия? 🌿",
+    "📝 Привет! Как насчёт короткого упражнения для ясности ума?\n\nПопробуй написать 3 вещи, за которые ты благодарен(на) сегодня. 🙏",
+    "💬 Я здесь, чтобы выслушать тебя.\n\nЕсли хочешь выговориться или просто поболтать — нажми «💬 Просто поговорить». Я всегда рядом. 💙",
+]
+
+# ============ НАСТРОЙКИ НАПОМИНАНИЙ ============
+reminder_settings = {
+    'morning': {'time': '08:00', 'enabled': True},
+    'evening': {'time': '21:00', 'enabled': True},
+    'midday': {'time': '13:00', 'enabled': True},
+    'reminder': {'time': '15:00', 'enabled': True},
+}
+
+# ============ СИСТЕМНЫЙ ПРОМПТ ============
 SYSTEM_PROMPT = """
 Ты — добрый и эмпатичный виртуальный друг по имени ПсихоBot. 
 Твоя задача — быть внимательным слушателем и собеседником.
@@ -398,18 +440,80 @@ SYSTEM_PROMPT = """
 5. Не оценивай и не критикуй
 6. Ты — друг, который всегда рядом и готов выслушать
 7. Используй имя человека, если оно известно
-
-Примеры ответов:
-- "Я слышу, что тебе сейчас тяжело. Хочешь рассказать подробнее?"
-- "Понимаю твои чувства. Это нормально — испытывать грусть/тревогу/злость."
-- "Расскажи мне больше о том, что ты чувствуешь."
-- "Как ты думаешь, что могло бы тебе помочь прямо сейчас?"
-- "Я здесь, я слушаю тебя. Ты не один."
-
-Важно: Ты не врач и не психотерапевт. Если человек говорит о суицидальных мыслях — мягко предложи обратиться к специалисту и дай телефон доверия 8-800-2000-122.
 """
 
+# ============ ХРАНИЛИЩЕ ДИАЛОГОВ ============
 user_conversations = {}
+
+# ============ ФУНКЦИИ ДЛЯ ОТПРАВКИ УВЕДОМЛЕНИЙ ============
+async def send_morning_notification(context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет утреннее приветствие всем пользователям"""
+    try:
+        # Получаем всех пользователей (кроме тех, кто отключил уведомления)
+        users = db.get_all_users()
+        for user in users:
+            user_id = user['user_id']
+            settings = db.get_user_settings(user_id)
+            if settings.get('morning_enabled', 1):
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=random.choice(MORNING_MESSAGES),
+                    parse_mode='Markdown'
+                )
+                await asyncio.sleep(0.2)  # Чтобы не было спама
+    except Exception as e:
+        logger.error(f"Ошибка утреннего уведомления: {e}")
+
+async def send_evening_notification(context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет вечернее приветствие всем пользователям"""
+    try:
+        users = db.get_all_users()
+        for user in users:
+            user_id = user['user_id']
+            settings = db.get_user_settings(user_id)
+            if settings.get('evening_enabled', 1):
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=random.choice(EVENING_MESSAGES),
+                    parse_mode='Markdown'
+                )
+                await asyncio.sleep(0.2)
+    except Exception as e:
+        logger.error(f"Ошибка вечернего уведомления: {e}")
+
+async def send_midday_notification(context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет дневное приветствие всем пользователям"""
+    try:
+        users = db.get_all_users()
+        for user in users:
+            user_id = user['user_id']
+            settings = db.get_user_settings(user_id)
+            if settings.get('midday_enabled', 1):
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=random.choice(MIDDAY_MESSAGES),
+                    parse_mode='Markdown'
+                )
+                await asyncio.sleep(0.2)
+    except Exception as e:
+        logger.error(f"Ошибка дневного уведомления: {e}")
+
+async def send_reminder_notification(context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет напоминание о медитации или упражнении"""
+    try:
+        users = db.get_all_users()
+        for user in users:
+            user_id = user['user_id']
+            settings = db.get_user_settings(user_id)
+            if settings.get('reminder_enabled', 1):
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=random.choice(REMINDER_MESSAGES),
+                    parse_mode='Markdown'
+                )
+                await asyncio.sleep(0.2)
+    except Exception as e:
+        logger.error(f"Ошибка напоминания: {e}")
 
 # ============ ОБРАБОТЧИКИ КОМАНД ============
 
@@ -418,11 +522,102 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     db.add_user(user_id, user.username, user.first_name, user.last_name)
     db.update_last_active(user_id)
+    
+    # Инициализируем настройки, если их нет
+    db.get_user_settings(user_id)
+    
     await update.message.reply_text(
-        f"👋 Привет, {user.first_name}! Я ПсихоBot — твой виртуальный друг и собеседник. Я здесь, чтобы выслушать тебя, поддержать и помочь разобраться в том, что тебя беспокоит.",
+        f"👋 Привет, {user.first_name}!\n\n"
+        f"Я ПсихоBot — твой виртуальный друг и собеседник.\n\n"
+        f"Теперь я могу не только отвечать, но и сам(а) напоминать о себе:\n"
+        f"🌅 Утром — добрые пожелания\n"
+        f"🌙 Вечером — вопросы для рефлексии\n"
+        f"☀️ Днём — поддерживающие сообщения\n"
+        f"🧘 Напоминания о медитации\n\n"
+        f"Настрой уведомления через **⏰ Напоминания**.\n\n"
+        f"Я всегда рядом, чтобы выслушать тебя. 💙",
         reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True),
         parse_mode="Markdown"
     )
+
+async def reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Настройка напоминаний"""
+    user_id = update.effective_user.id
+    settings = db.get_user_settings(user_id)
+    
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✅ Утро" if settings.get('morning_enabled', 1) else "❌ Утро",
+                callback_data="toggle_morning"
+            ),
+            InlineKeyboardButton(
+                "✅ День" if settings.get('midday_enabled', 1) else "❌ День",
+                callback_data="toggle_midday"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "✅ Вечер" if settings.get('evening_enabled', 1) else "❌ Вечер",
+                callback_data="toggle_evening"
+            ),
+            InlineKeyboardButton(
+                "✅ Напоминания" if settings.get('reminder_enabled', 1) else "❌ Напоминания",
+                callback_data="toggle_reminder"
+            )
+        ],
+        [InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]
+    ]
+    
+    await update.message.reply_text(
+        "⏰ **Настройка напоминаний**\n\n"
+        "Включи или отключи уведомления, которые хочешь получать.\n\n"
+        "🌅 **Утро** (~8:00) — доброе начало дня\n"
+        "☀️ **День** (~13:00) — поддержка в середине дня\n"
+        "🌙 **Вечер** (~21:00) — рефлексия перед сном\n"
+        "🧘 **Напоминания** (~15:00) — о медитации и упражнениях",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def reminder_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка нажатий на кнопки настроек"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    data = query.data
+    
+    if data == "back_to_menu":
+        await query.edit_message_text(
+            "🔙 Возвращаюсь в главное меню",
+            reply_markup=ReplyKeyboardMarkup(main_keyboard, resize_keyboard=True)
+        )
+        return
+    
+    # Обработка переключения настроек
+    setting_map = {
+        "toggle_morning": "morning_enabled",
+        "toggle_evening": "evening_enabled",
+        "toggle_midday": "midday_enabled",
+        "toggle_reminder": "reminder_enabled"
+    }
+    
+    if data in setting_map:
+        setting_name = setting_map[data]
+        settings = db.get_user_settings(user_id)
+        current_value = settings.get(setting_name, 1)
+        new_value = 0 if current_value else 1
+        db.update_user_settings(user_id, **{setting_name: new_value})
+        
+        # Обновляем сообщение
+        await query.edit_message_text(
+            "✅ Настройки обновлены!",
+            reply_markup=query.message.reply_markup
+        )
+    
+    # Показываем обновлённые настройки
+    await reminders(update, context)
 
 async def premium_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -577,7 +772,7 @@ async def handle_free_talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_conversations[user_id] = []
     context.user_data['free_talk_mode'] = True
     await update.message.reply_text(
-        "💬 **Я слушаю тебя.**\n\nРасскажи мне всё, что у тебя на душе.\nЯ здесь, чтобы выслушать, поддержать и помочь.\n\nМожешь говорить о чём угодно:\n• что тебя беспокоит\n• что радует или огорчает\n• твои мысли и чувства\n• просто о том, как прошёл твой день\n\nЧтобы выйти из режима разговора, отправь /cancel",
+        "💬 **Я слушаю тебя.**\n\nРасскажи мне всё, что у тебя на душе.\nЯ здесь, чтобы выслушать, поддержать и помочь.\n\nЧтобы выйти из режима разговора, отправь /cancel",
         parse_mode="Markdown"
     )
 
@@ -594,7 +789,7 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
         remaining = db.get_remaining_messages(user_id)
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🌟 Купить подписку", callback_data="buy_subscription")]])
         await update.message.reply_text(
-            f"💙 Сегодня ты уже использовал(а) все {20 - remaining} бесплатных сообщений.\n\nЧтобы продолжать разговор без ограничений, оформи подписку **ПсихоBot+**.\n\nС подпиской ты получишь:\n✅ Безлимитные разговоры\n✅ Долгосрочную память\n✅ Персональные рекомендации\n\nНажми на кнопку ниже, чтобы оформить подписку 👇",
+            f"💙 Сегодня ты уже использовал(а) все {20 - remaining} бесплатных сообщений.\n\nЧтобы продолжать разговор без ограничений, оформи подписку **ПсихоBot+**.\n\nНажми на кнопку ниже, чтобы оформить подписку 👇",
             parse_mode="Markdown",
             reply_markup=keyboard
         )
@@ -665,7 +860,7 @@ async def handle_diary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.update_last_active(user_id)
     context.user_data['diary_mode'] = True
     await update.message.reply_text(
-        "📓 **Твой личный дневник**\n\nНапиши всё, что хочешь сохранить.\nЭто только для тебя.\n\nОтправь /cancel чтобы выйти из режима дневника.",
+        "📓 **Твой личный дневник**\n\nНапиши всё, что хочешь сохранить.\nЭто только для тебя.\n\nОтправь /cancel чтобы выйти.",
         parse_mode="Markdown"
     )
 
@@ -703,7 +898,7 @@ async def handle_emergency(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "💙 **Обо мне**\n\nЯ ПсихоBot — твой виртуальный друг и собеседник.\n\n**Что я умею:**\n• 💬 Слушать и поддерживать в любой ситуации\n• 🧘 Помогать успокоиться с помощью медитаций\n• 📝 Предлагать упражнения для ясности ума\n• 📓 Сохранять твои мысли в личном дневнике\n• 📊 Показывать твой прогресс\n\n**Важно:** Я не заменяю профессионального психолога. Если тебе тяжело — пожалуйста, обратись к специалисту.\n\nЯ всегда рядом. Ты не один. 💚"
+        "💙 **Обо мне**\n\nЯ ПсихоBot — твой виртуальный друг и собеседник.\n\n**Что я умею:**\n• 💬 Слушать и поддерживать в любой ситуации\n• 🧘 Помогать успокоиться с помощью медитаций\n• 📝 Предлагать упражнения для ясности ума\n• 📓 Сохранять твои мысли в личном дневнике\n• 📊 Показывать твой прогресс\n• ⏰ Присылать утренние, дневные и вечерние напоминания\n\n**Важно:** Я не заменяю профессионального психолога. Если тебе тяжело — пожалуйста, обратись к специалисту.\n\nЯ всегда рядом. Ты не один. 💚"
     )
 
 # ============ ГЛАВНЫЙ ОБРАБОТЧИК ============
@@ -728,6 +923,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_stats(update, context)
     elif text == "💬 Поддержка":
         await handle_support(update, context)
+    elif text == "⏰ Напоминания":
+        await reminders(update, context)
     elif text == "🆘 Помощь":
         await handle_emergency(update, context)
     elif text == "ℹ️ О боте":
@@ -795,21 +992,73 @@ def main():
     if not token:
         logger.error("Токен не найден!")
         return
+    
     flask_thread = Thread(target=run_flask, daemon=True)
     flask_thread.start()
     logger.info("Веб-сервер запущен")
+    
     app = Application.builder().token(token).build()
+    
+    # Команды
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CommandHandler("premium", premium_info))
     app.add_handler(CommandHandler("subscribe", subscribe))
     app.add_handler(CommandHandler("activate_premium", activate_premium))
     app.add_handler(CommandHandler("status", my_status))
+    
+    # Платежи
     app.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
-    app.add_handler(CallbackQueryHandler(callback_query_handler))
+    
+    # Callback-запросы (кнопки)
+    app.add_handler(CallbackQueryHandler(reminder_callback, pattern="^(toggle_|back_to_menu)"))
+    app.add_handler(CallbackQueryHandler(callback_query_handler, pattern="^buy_subscription"))
+    
+    # Текстовые сообщения
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    logger.info("✅ ПсихоBot — виртуальный друг с подпиской через Telegram Stars и расширенным контентом запущен!")
+    
+    # ===== НАСТРОЙКА ЕЖЕДНЕВНЫХ УВЕДОМЛЕНИЙ =====
+    job_queue = app.job_queue
+    
+    if job_queue:
+        # Утреннее уведомление (8:00 по Москве)
+        job_queue.run_daily(
+            send_morning_notification,
+            time=datetime.strptime("08:00", "%H:%M").time(),
+            days=tuple(range(7)),
+            name="morning_notification"
+        )
+        
+        # Дневное уведомление (13:00)
+        job_queue.run_daily(
+            send_midday_notification,
+            time=datetime.strptime("13:00", "%H:%M").time(),
+            days=tuple(range(7)),
+            name="midday_notification"
+        )
+        
+        # Напоминание (15:00)
+        job_queue.run_daily(
+            send_reminder_notification,
+            time=datetime.strptime("15:00", "%H:%M").time(),
+            days=tuple(range(7)),
+            name="reminder_notification"
+        )
+        
+        # Вечернее уведомление (21:00)
+        job_queue.run_daily(
+            send_evening_notification,
+            time=datetime.strptime("21:00", "%H:%M").time(),
+            days=tuple(range(7)),
+            name="evening_notification"
+        )
+        
+        logger.info("✅ Ежедневные уведомления настроены!")
+    else:
+        logger.warning("⚠️ Job Queue не доступна. Уведомления не будут работать.")
+    
+    logger.info("✅ ПсихоBot — виртуальный друг с подпиской и уведомлениями запущен!")
     app.run_polling()
 
 if __name__ == "__main__":
