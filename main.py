@@ -758,6 +758,14 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(response)
     return True
 
+async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка нажатий на инлайн-кнопки"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "buy_subscription":
+        await send_subscription_invoice(query.message, context)
+
 async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db.update_last_active(user_id)
@@ -791,5 +799,3 @@ async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ['🌳 Мои корни', '🎨 Творческий поток'],
         ['🛡️ Мои границы', '🏆 Моя ценность'],
         ['🔙 Главное меню']
-    ]
-    await update
