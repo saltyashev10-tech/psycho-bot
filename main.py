@@ -2,8 +2,8 @@ import os
 import logging
 from flask import Flask
 from threading import Thread
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, PreCheckoutQueryHandler
 import random
 import aiohttp
 import asyncio
@@ -185,7 +185,7 @@ async def premium_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🌙 **Вечерние рефлексии** — полезные привычки ежедневно
 🎵 **Звуки природы** — для расслабления и сна
 
-**Стоимость: 499 ₽ / месяц**
+**Стоимость: 50⭐ / месяц**
 
 **Как оплатить:**
 1. Напиши /subscribe
@@ -194,31 +194,91 @@ async def premium_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(premium_text, parse_mode="Markdown")
 
-async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Команда для подписки"""
+async def send_subscription_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет счёт на оплату подписки через Telegram Stars"""
     user_id = update.effective_user.id
-    
     sub = db.get_user_subscription(user_id)
     if sub and sub['subscription_status'] == 'premium':
-        await update.message.reply_text(
-            "🌟 У тебя уже есть подписка! Спасибо, что с нами 💙"
+        await update.message.reply_text("🌟 У тебя уже есть подписка! Спасибо, что с нами 💙")
+        return
+
+    # Создаём уникальный payload для этого пользователя
+    payload = f"sub_month_{user_id}_{datetime.now().timestamp()}"
+
+    try:
+        await update.message.reply_invoice(
+            title="ПсихоBot+ (1 месяц)",
+            description="Безлимитные разговоры, долгосрочная память и персональные рекомендации",
+            payload=payload,
+            provider_token="",  # Для Telegram Stars оставляем пустым
+            currency="XTR",  # Валюта Telegram Stars
+            prices=[LabeledPrice("Подписка на месяц", 50)],  # 50 звёзд
+            start_parameter="psychobot_sub",
+            need_name=False,
+            need_phone_number=False,
+            need_email=False,
+            is_flexible=False,
         )
+        logger.info(f"Счёт отправлен пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке счёта: {e}")
+        await update.message.reply_text(
+            "Извините, произошла ошибка при создании счёта. Попробуйте позже."
+        )
+
+async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда для оформления подписки — отправляет счёт"""
+    await send_subscription_invoice(update, context)
+
+async def pre_checkout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка предварительной проверки платежа"""
+    query = update.pre_checkout_query
+    user_id = query.from_user.id
+    
+    # Проверяем, может ли пользователь купить подписку
+    sub = db.get_user_subscription(user_id)
+    if sub and sub['subscription_status'] == 'premium':
+        await query.answer(ok=False, error_message="У вас уже активна подписка!")
         return
     
+    # Проверяем валидность payload
+    payload = query.invoice_payload
+    if not payload or not payload.startswith("sub_month_"):
+        await query.answer(ok=False, error_message="Неверный запрос. Попробуйте ещё раз.")
+        return
+    
+    # Всё хорошо — подтверждаем
+    await query.answer(ok=True)
+
+async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка успешной оплаты подписки"""
+    user_id = update.effective_user.id
+    payment_info = update.message.successful_payment
+    
+    # Активируем подписку на 30 дней
+    expires_at = (datetime.now() + timedelta(days=30)).isoformat()
+    db.set_subscription(user_id, 'premium', expires_at)
+    
     await update.message.reply_text(
-        "💳 **Оплата подписки**\n\n"
-        "Сейчас мы используем тестовый режим.\n\n"
-        "Чтобы активировать подписку, напиши:\n"
-        "`/activate_premium` — это временная команда для теста.",
+        f"🎉 **Подписка ПсихоBot+ успешно активирована!**\n\n"
+        f"Мы получили твой платёж {payment_info.total_amount // 100}⭐️.\n"
+        f"Подписка активна до: {expires_at}\n\n"
+        f"Теперь ты можешь:\n"
+        f"💬 Общаться безлимитно\n"
+        f"🧠 Бот будет помнить всё, что ты рассказываешь\n"
+        f"📓 Анализировать записи в дневнике\n\n"
+        f"Спасибо, что выбрал заботу о себе! 💙",
         parse_mode="Markdown"
     )
+    
+    # Логируем покупку
+    logger.info(f"User {user_id} bought subscription for {payment_info.total_amount // 100} Stars. Payload: {payment_info.invoice_payload}")
 
 async def activate_premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Временная команда для активации подписки (только для теста)"""
     user_id = update.effective_user.id
     
     db.add_user(user_id)
-    
     expires_at = (datetime.now() + timedelta(days=30)).isoformat()
     db.set_subscription(user_id, 'premium', expires_at)
     
@@ -358,7 +418,6 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_id = update.effective_user.id
     user_message = update.message.text
     
-    # Проверяем команду выхода
     if user_message.lower() in ['/cancel', 'выход', 'выйти']:
         context.user_data['free_talk_mode'] = False
         await update.message.reply_text(
@@ -370,6 +429,9 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # ===== ПРОВЕРКА ЛИМИТА =====
     if not db.can_send_message(user_id):
         remaining = db.get_remaining_messages(user_id)
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🌟 Купить подписку", callback_data="buy_subscription")]
+        ])
         await update.message.reply_text(
             f"💙 Сегодня ты уже использовал(а) все {20 - remaining} бесплатных сообщений.\n\n"
             f"Чтобы продолжать разговор без ограничений, оформи подписку **ПсихоBot+**.\n\n"
@@ -377,14 +439,13 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"✅ Безлимитные разговоры\n"
             f"✅ Долгосрочную память\n"
             f"✅ Персональные рекомендации\n\n"
-            f"Напиши /premium, чтобы узнать подробнее.",
-            parse_mode="Markdown"
+            f"Нажми на кнопку ниже, чтобы оформить подписку 👇",
+            parse_mode="Markdown",
+            reply_markup=keyboard
         )
         return True
     
-    # Увеличиваем счётчик использования
     db.increment_daily_usage(user_id)
-    
     db.update_last_active(user_id)
     db.increment_stat(user_id, "total_messages")
     db.increment_stat(user_id, "ai_messages_count")
@@ -406,6 +467,19 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     await update.message.reply_text(response)
     return True
+
+# ============ ОБРАБОТЧИКИ КНОПОК И CALLBACK ============
+
+async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка нажатий на инлайн-кнопки"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "buy_subscription":
+        # Отправляем счёт на оплату подписки
+        await send_subscription_invoice(query.message, context)
+
+# ============ ДРУГИЕ ОБРАБОТЧИКИ ============
 
 async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -598,12 +672,18 @@ def main():
     app.add_handler(CommandHandler("activate_premium", activate_premium))
     app.add_handler(CommandHandler("status", my_status))
     
-    # Сообщения
+    # Обработчики платежей через Telegram Stars
+    app.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
+    
+    # Обработчик инлайн-кнопок (например, "Купить подписку")
+    app.add_handler(CallbackQueryHandler(callback_query_handler))
+    
+    # Обработчик текстовых сообщений
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    logger.info("✅ ПсихоBot — виртуальный друг с системой подписки запущен!")
+    logger.info("✅ ПсихоBot — виртуальный друг с подпиской через Telegram Stars запущен!")
     app.run_polling()
 
 if __name__ == "__main__":
-    main()
     main()
