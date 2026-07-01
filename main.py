@@ -41,29 +41,179 @@ main_keyboard = [
 
 # ============ КОНТЕНТ ============
 MEDITATIONS = {
+    # === Основные (оставляем для обратной совместимости) ===
     "breathing": """
 🌬️ **Дыхательная техника "4-7-8"**
 
-1. Вдохните через нос на **4 счета**
-2. Задержите дыхание на **7 счетов**
-3. Медленно выдохните через рот на **8 счетов**
+1. Вдох через нос на **4 счета**
+2. Задержка на **7 счетов**
+3. Выдох через рот на **8 счетов**
 4. Повторите **4-8 раз**
 
-✨ Эта техника помогает успокоиться.
+✨ Успокаивает нервную систему.
 """,
     "mindfulness": """
 🧘 **Медитация осознанности**
 
 1. Сядьте удобно
 2. Сосредоточьтесь на дыхании
-3. Замечайте мысли, не цепляйтесь за них
+3. Замечайте мысли, не цепляясь за них
 4. Мягко возвращайтесь к дыханию
 
 💡 Просто будьте в настоящем моменте.
 """,
+
+    # === 10 НОВЫХ МЕДИТАЦИЙ ===
+    "ocean_breath": """
+🌊 **Дыхание океана**
+
+Представьте, что ваше дыхание — это волны океана.
+
+📋 **Инструкция:**
+1. Сядьте удобно, закройте глаза
+2. На вдохе представьте, как волна накатывает на берег
+3. На выдохе — как волна отступает
+4. Дышите плавно, без усилий
+5. Продолжайте 5-7 минут
+
+✨ Помогает успокоиться и отпустить напряжение.
+""",
+    "inner_light": """
+🔥 **Внутренний свет**
+
+Эта медитация наполняет вас теплом и энергией.
+
+📋 **Инструкция:**
+1. Закройте глаза и сделайте 3 глубоких вдоха
+2. Представьте в груди мягкий тёплый свет
+3. С каждым вдохом свет становится ярче и теплее
+4. С каждым выдохом свет распространяется по всему телу
+5. Позвольте этому теплу наполнить вас
+
+✨ Даёт чувство внутренней опоры и спокойствия.
+""",
+    "forest_walk": """
+🌿 **Прогулка по лесу**
+
+Визуализация для расслабления и восстановления.
+
+📋 **Инструкция:**
+1. Закройте глаза, представьте красивый лес
+2. Идите по тропинке, чувствуйте землю под ногами
+3. Слышьте пение птиц и шелест листьев
+4. Чувствуйте свежий воздух и запах сосен
+5. Остановитесь на поляне, вдохните полной грудью
+6. Побудьте в этом месте столько, сколько нужно
+
+✨ Восстанавливает ресурсное состояние.
+""",
+    "self_forgiveness": """
+✨ **Медитация прощения себя**
+
+Эта практика помогает принять и отпустить прошлое.
+
+📋 **Инструкция:**
+1. Сядьте удобно, положите руку на сердце
+2. Вспомните ситуацию, где вы себя осуждаете
+3. Скажите мысленно: "Я прощаю себя за это"
+4. Почувствуйте, как тяжесть уходит с каждым выдохом
+5. Повторите несколько раз: "Я достоин(на) прощения"
+6. Закончите с благодарностью к себе
+
+💙 Помогает освободиться от чувства вины.
+""",
+    "moment_value": """
+💎 **Ценность момента**
+
+Осознанность здесь и сейчас.
+
+📋 **Инструкция:**
+1. Откройте глаза, осмотритесь вокруг
+2. Найдите 5 вещей, которые вы раньше не замечали
+3. Сосредоточьтесь на одном предмете, изучите его детали
+4. Почувствуйте, что этот момент существует только сейчас
+5. Позвольте себе быть полностью в этом мгновении
+
+💡 Напоминает о ценности каждого мгновения.
+""",
+    "rainbow_emotions": """
+🌈 **Радуга эмоций**
+
+Работа с эмоциями через визуализацию цвета.
+
+📋 **Инструкция:**
+1. Закройте глаза и представьте радугу
+2. Отметьте, какая эмоция сейчас у вас внутри
+3. Подберите цвет, который её отражает
+4. Мысленно вдохните этот цвет, наполнитесь им
+5. На выдохе отпустите напряжение
+6. Теперь представьте, что эмоция меняет цвет на более спокойный
+
+🎨 Помогает осознать и принять свои чувства.
+""",
+    "morning_sun": """
+☀️ **Утреннее солнце**
+
+Энергичная медитация для начала дня.
+
+📋 **Инструкция:**
+1. Встаньте или сядьте с прямой спиной
+2. Представьте, что вы встречаете восход солнца
+3. С каждым вдохом вы вдыхаете солнечный свет
+4. На выдохе посылаете лучи солнца всему телу
+5. Чувствуйте, как энергия наполняет каждую клетку
+6. Откройте глаза с лёгкой улыбкой
+
+☀️ Даёт заряд бодрости на весь день.
+""",
+    "night_moon": """
+🌙 **Лунная ночь**
+
+Глубокая релаксация перед сном.
+
+📋 **Инструкция:**
+1. Лягте в постель, закройте глаза
+2. Представьте ночное небо с луной
+3. С каждым выдохом вы становитесь легче
+4. Лунный свет мягко окутывает всё тело
+5. Позвольте себе полностью расслабиться
+6. Слейтесь с тишиной и покоем ночи
+
+💤 Помогает заснуть и восстановиться.
+""",
+    "open_heart": """
+🌺 **Открытое сердце**
+
+Практика на любовь и доброту к себе.
+
+📋 **Инструкция:**
+1. Сядьте, положите руки на сердце
+2. Вспомните момент, когда вы были добры к себе
+3. Почувствуйте тепло в груди
+4. На вдохе наполняйте это тепло
+5. На выдохе отправляйте любовь себе
+6. Повторите: "Я люблю себя, я принимаю себя"
+
+💚 Создаёт чувство безусловного принятия.
+""",
+    "centering": """
+🎯 **Центрирование**
+
+Быстрая техника для фокуса и спокойствия.
+
+📋 **Инструкция:**
+1. Встаньте, почувствуйте твёрдую опору под ногами
+2. Представьте, что из центра тела растёт стержень
+3. Вытянитесь мысленно вверх и вниз одновременно
+4. Ощутите баланс и устойчивость
+5. Побудьте в этом центрированном состоянии 2-3 минуты
+
+🎯 Помогает быстро собраться в стрессовой ситуации.
+""",
 }
 
 EXERCISES = {
+    # === Основные (оставляем для обратной совместимости) ===
     "gratitude": """
 🙏 **Три благодарности**
 
@@ -72,7 +222,7 @@ EXERCISES = {
 2. За что вы благодарны **другому человеку**?
 3. За что вы благодарны **миру/жизни**?
 
-✨ Это повышает уровень счастья.
+✨ Исследования показывают: ежедневная практика благодарности повышает уровень счастья на 25%.
 """,
     "grounding": """
 🌍 **Техника "5-4-3-2-1"**
@@ -84,7 +234,153 @@ EXERCISES = {
 👃 **2 запаха**, которые вы ощущаете
 👅 **1 вкус**, который вы чувствуете
 
-💙 Помогает при тревоге.
+💙 Помогает при тревоге и панических атаках.
+""",
+
+    # === 10 НОВЫХ УПРАЖНЕНИЙ ===
+    "success_diary": """
+📋 **Дневник успеха**
+
+Запишите прямо сейчас:
+1. Одно достижение за сегодня (даже маленькое)
+2. Одно дело, которое вы сделали хорошо
+3. Один шаг, который вы сделали вперёд
+
+💫 Это упражнение повышает самооценку и уверенность.
+""",
+    "observer": """
+🔍 **Упражнение "Наблюдатель"**
+
+Практика отделения от мыслей.
+
+📋 **Инструкция:**
+1. Сядьте и закройте глаза
+2. Представьте, что вы сидите на берегу реки
+3. Ваши мысли — это листья, плывущие по реке
+4. Просто наблюдайте, как они проплывают мимо
+5. Не цепляйтесь за них, не оценивайте
+6. Позвольте им течь свободно
+
+💡 Помогает не отождествляться с негативными мыслями.
+""",
+    "self_hug": """
+🤗 **Объятие себя**
+
+Физическая практика самоподдержки.
+
+📋 **Инструкция:**
+1. Сядьте или встаньте удобно
+2. Обнимите себя за плечи
+3. Почувствуйте тепло своих рук
+4. Скажите мысленно: "Я с тобой, я рядом"
+5. Побудьте в этом объятии 1-2 минуты
+6. Почувствуйте, как тело расслабляется
+
+💙 Дарит ощущение безопасности и поддержки.
+""",
+    "focus_shift": """
+💭 **Смена фокуса**
+
+Перенос внимания с проблемы на ресурсы.
+
+📋 **Инструкция:**
+1. Напишите одну проблему, которая вас беспокоит
+2. Напишите 3 ресурса, которые у вас есть:
+   • Ваши сильные качества
+   • Люди, которые могут поддержать
+   • Что уже помогает вам справляться
+3. Перечитайте список ресурсов
+4. Почувствуйте, как меняется ваше состояние
+
+🔄 Помогает увидеть ситуацию с другой стороны.
+""",
+    "joy_planning": """
+📅 **Планирование радости**
+
+Запланируйте 3 приятных события на неделю:
+1. ___________
+2. ___________
+3. ___________
+
+Это могут быть маленькие радости:
+• прогулка в парке
+• любимый фильм
+• звонок другу
+• чашка хорошего чая
+
+✨ Создаёт привычку заботиться о себе.
+""",
+    "power_words": """
+💪 **Сила слова**
+
+Работа с ключевыми убеждениями.
+
+📋 **Инструкция:**
+1. Запишите 2-3 убеждения, которые вас ограничивают
+   • Например: "Я не справлюсь", "Мне всё равно"
+2. Перепишите их в поддерживающие:
+   • "Я справляюсь шаг за шагом"
+   • "Я делаю всё, что в моих силах"
+3. Повторите новые фразы 3 раза вслух
+4. Почувствуйте, как они звучат внутри вас
+
+💡 Меняет внутренний диалог на поддерживающий.
+""",
+    "my_roots": """
+🌳 **Мои корни**
+
+Рефлексия на опору и поддержку.
+
+📋 **Инструкция:**
+1. Вспомните людей, которые вас поддерживают
+2. Что даёт вам силы в трудные моменты?
+3. Какие ваши ценности являются опорой?
+4. Запишите 3 источника вашей силы
+5. Почувствуйте, как эти корни держат вас
+
+🌱 Укрепляет чувство устойчивости и защищённости.
+""",
+    "creative_flow": """
+🎨 **Творческий поток**
+
+5 минут свободного выражения.
+
+📋 **Инструкция:**
+1. Возьмите лист бумаги и ручку
+2. Рисуйте или пишите всё, что приходит в голову
+3. Не оценивайте, не исправляйте
+4. Позвольте руке двигаться свободно
+5. Просто будьте в потоке творчества
+
+🎨 Помогает выразить эмоции через творчество.
+""",
+    "my_boundaries": """
+🛡️ **Мои границы**
+
+Практика на осознание личных границ.
+
+📋 **Инструкция:**
+1. Вспомните ситуацию, где вы чувствовали дискомфорт
+2. Напишите: "Моей границей было..."
+3. Что вы чувствовали в тот момент?
+4. Что бы вы хотели сказать или сделать иначе?
+5. Сформулируйте новое правило для себя
+
+💙 Помогает осознать и защитить свои границы.
+""",
+    "my_value": """
+🏆 **Моя ценность**
+
+Упражнение на самоценность.
+
+📋 **Инструкция:**
+1. Напишите 5 качеств, за которые вы себя цените
+2. Напишите 3 ситуации, где вы проявили эти качества
+3. Вспомните, как вы помогли кому-то или себе
+4. Прочитайте всё написанное вслух
+5. Скажите себе: "Я важен(на), я ценен(на)"
+
+🌟 Укрепляет чувство собственной значимости.
 """,
 }
 
@@ -202,7 +498,6 @@ async def send_subscription_invoice(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text("🌟 У тебя уже есть подписка! Спасибо, что с нами 💙")
         return
 
-    # Создаём уникальный payload для этого пользователя
     payload = f"sub_month_{user_id}_{datetime.now().timestamp()}"
 
     try:
@@ -210,9 +505,9 @@ async def send_subscription_invoice(update: Update, context: ContextTypes.DEFAUL
             title="ПсихоBot+ (1 месяц)",
             description="Безлимитные разговоры, долгосрочная память и персональные рекомендации",
             payload=payload,
-            provider_token="",  # Для Telegram Stars оставляем пустым
-            currency="XTR",  # Валюта Telegram Stars
-            prices=[LabeledPrice("Подписка на месяц", 50)],  # 50 звёзд
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice("Подписка на месяц", 50)],
             start_parameter="psychobot_sub",
             need_name=False,
             need_phone_number=False,
@@ -235,19 +530,16 @@ async def pre_checkout_callback(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.pre_checkout_query
     user_id = query.from_user.id
     
-    # Проверяем, может ли пользователь купить подписку
     sub = db.get_user_subscription(user_id)
     if sub and sub['subscription_status'] == 'premium':
         await query.answer(ok=False, error_message="У вас уже активна подписка!")
         return
     
-    # Проверяем валидность payload
     payload = query.invoice_payload
     if not payload or not payload.startswith("sub_month_"):
         await query.answer(ok=False, error_message="Неверный запрос. Попробуйте ещё раз.")
         return
     
-    # Всё хорошо — подтверждаем
     await query.answer(ok=True)
 
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -255,7 +547,6 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     user_id = update.effective_user.id
     payment_info = update.message.successful_payment
     
-    # Активируем подписку на 30 дней
     expires_at = (datetime.now() + timedelta(days=30)).isoformat()
     db.set_subscription(user_id, 'premium', expires_at)
     
@@ -271,7 +562,6 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
         parse_mode="Markdown"
     )
     
-    # Логируем покупку
     logger.info(f"User {user_id} bought subscription for {payment_info.total_amount // 100} Stars. Payload: {payment_info.invoice_payload}")
 
 async def activate_premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -468,27 +758,18 @@ async def handle_ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(response)
     return True
 
-# ============ ОБРАБОТЧИКИ КНОПОК И CALLBACK ============
-
-async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка нажатий на инлайн-кнопки"""
-    query = update.callback_query
-    await query.answer()
-    
-    if query.data == "buy_subscription":
-        # Отправляем счёт на оплату подписки
-        await send_subscription_invoice(query.message, context)
-
-# ============ ДРУГИЕ ОБРАБОТЧИКИ ============
-
 async def handle_meditation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db.update_last_active(user_id)
     db.increment_stat(user_id, "meditations_count")
     
     keyboard = [
-        ['🌬️ Дыхание 4-7-8'],
-        ['🧘 Осознанность'],
+        ['🌬️ Дыхание 4-7-8', '🧘 Осознанность'],
+        ['🌊 Дыхание океана', '🔥 Внутренний свет'],
+        ['🌿 Лесная прогулка', '✨ Прощение себя'],
+        ['💎 Ценность момента', '🌈 Радуга эмоций'],
+        ['☀️ Утреннее солнце', '🌙 Лунная ночь'],
+        ['🌺 Открытое сердце', '🎯 Центрирование'],
         ['🔙 Главное меню']
     ]
     await update.message.reply_text(
@@ -503,187 +784,12 @@ async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.increment_stat(user_id, "exercises_count")
     
     keyboard = [
-        ['🙏 Три благодарности'],
-        ['🌍 Заземление'],
+        ['🙏 Три благодарности', '🌍 Заземление'],
+        ['📋 Дневник успеха', '🔍 Наблюдатель'],
+        ['🤗 Объятие себя', '💭 Смена фокуса'],
+        ['📅 Планирование радости', '💪 Сила слова'],
+        ['🌳 Мои корни', '🎨 Творческий поток'],
+        ['🛡️ Мои границы', '🏆 Моя ценность'],
         ['🔙 Главное меню']
     ]
-    await update.message.reply_text(
-        "📝 **Выбери упражнение для ясности ума:**",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
-        parse_mode="Markdown"
-    )
-
-async def handle_diary(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db.update_last_active(user_id)
-    context.user_data['diary_mode'] = True
-    await update.message.reply_text(
-        "📓 **Твой личный дневник**\n\n"
-        "Напиши всё, что хочешь сохранить.\n"
-        "Это только для тебя.\n\n"
-        "Отправь /cancel чтобы выйти из режима дневника.",
-        parse_mode="Markdown"
-    )
-
-async def handle_diary_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.user_data.get('diary_mode'):
-        return False
-    
-    user_id = update.effective_user.id
-    entry = update.message.text
-    db.add_diary_entry(user_id, entry)
-    db.increment_stat(user_id, "total_messages")
-    
-    await update.message.reply_text(
-        "✅ Запись сохранена.\n\n"
-        "Продолжай писать или отправь /cancel чтобы выйти."
-    )
-    return True
-
-async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db.update_last_active(user_id)
-    
-    stats = db.get_stats(user_id)
-    if stats:
-        stats_text = f"""
-📊 **Твоя статистика:**
-
-💬 Разговоров со мной: {stats['ai_messages_count']}
-🧘 Медитаций: {stats['meditations_count']}
-📝 Упражнений: {stats['exercises_count']}
-📨 Всего сообщений: {stats['total_messages']}
-
-🌟 Ты молодец! Продолжай заботиться о себе.
-"""
-        await update.message.reply_text(stats_text, parse_mode="Markdown")
-    else:
-        await update.message.reply_text(
-            "📊 Статистика пока пуста.\n\n"
-            "Начни разговор со мной — и мы создадим твою историю вместе! 💙"
-        )
-
-async def handle_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db.update_last_active(user_id)
-    await update.message.reply_text(random.choice(SUPPORT_MESSAGES))
-
-async def handle_emergency(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    emergency_text = """
-🆘 **Если тебе нужна помощь прямо сейчас:**
-
-📞 **Телефоны доверия (24/7):**
-
-• **8-800-2000-122** — Единый телефон доверия
-• **112** — Экстренные службы
-
-💙 **Помни:** обратиться за помощью — это правильно и ответственно.
-
-Я здесь, чтобы поддержать тебя в любое время. 💚
-"""
-    await update.message.reply_text(emergency_text)
-
-async def handle_about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    about_text = """
-💙 **Обо мне**
-
-Я ПсихоBot — твой виртуальный друг и собеседник.
-
-**Что я умею:**
-• 💬 Слушать и поддерживать в любой ситуации
-• 🧘 Помогать успокоиться с помощью медитаций
-• 📝 Предлагать упражнения для ясности ума
-• 📓 Сохранять твои мысли в личном дневнике
-• 📊 Показывать твой прогресс
-
-**Важно:** Я не заменяю профессионального психолога. 
-Если тебе тяжело — пожалуйста, обратись к специалисту.
-
-Я всегда рядом. Ты не один. 💚
-"""
-    await update.message.reply_text(about_text)
-
-# ============ ГЛАВНЫЙ ОБРАБОТЧИК ============
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    
-    if context.user_data.get('free_talk_mode'):
-        await handle_ai_response(update, context)
-        return
-    
-    if context.user_data.get('diary_mode'):
-        await handle_diary_message(update, context)
-        return
-    
-    if text == "💬 Просто поговорить":
-        await handle_free_talk(update, context)
-    elif text == "🧘 Медитация":
-        await handle_meditation(update, context)
-    elif text == "📝 Упражнение":
-        await handle_exercise(update, context)
-    elif text == "📓 Дневник":
-        await handle_diary(update, context)
-    elif text == "📊 Статистика":
-        await handle_stats(update, context)
-    elif text == "💬 Поддержка":
-        await handle_support(update, context)
-    elif text == "🆘 Помощь":
-        await handle_emergency(update, context)
-    elif text == "ℹ️ О боте":
-        await handle_about(update, context)
-    elif text == "🔙 Главное меню":
-        await start(update, context)
-    elif text == "🌬️ Дыхание 4-7-8":
-        await update.message.reply_text(MEDITATIONS["breathing"])
-    elif text == "🧘 Осознанность":
-        await update.message.reply_text(MEDITATIONS["mindfulness"])
-    elif text == "🙏 Три благодарности":
-        await update.message.reply_text(EXERCISES["gratitude"])
-    elif text == "🌍 Заземление":
-        await update.message.reply_text(EXERCISES["grounding"])
-    else:
-        await update.message.reply_text(
-            "💬 Я всегда рад поговорить с тобой.\n\n"
-            "Нажми **'💬 Просто поговорить'**, чтобы начать разговор.\n"
-            "Или выбери другую функцию из меню.\n\n"
-            "Ты не один. 💙",
-            parse_mode="Markdown"
-        )
-
-# ============ ЗАПУСК ============
-def main():
-    token = "8516115766:AAFhchBI9paY9KMDeT9WppKoEXshWtt67qE"
-    
-    if not token:
-        logger.error("Токен не найден!")
-        return
-    
-    flask_thread = Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    logger.info("Веб-сервер запущен")
-    
-    app = Application.builder().token(token).build()
-    
-    # Команды
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("cancel", cancel))
-    app.add_handler(CommandHandler("premium", premium_info))
-    app.add_handler(CommandHandler("subscribe", subscribe))
-    app.add_handler(CommandHandler("activate_premium", activate_premium))
-    app.add_handler(CommandHandler("status", my_status))
-    
-    # Обработчики платежей через Telegram Stars
-    app.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
-    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
-    
-    # Обработчик инлайн-кнопок (например, "Купить подписку")
-    app.add_handler(CallbackQueryHandler(callback_query_handler))
-    
-    # Обработчик текстовых сообщений
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    logger.info("✅ ПсихоBot — виртуальный друг с подпиской через Telegram Stars запущен!")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+    await update
