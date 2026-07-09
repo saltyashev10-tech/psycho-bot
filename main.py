@@ -988,7 +988,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============ ЗАПУСК ============
 
 def main():
-    token = "8516115766:AAFhchBI9paY9KMDeT9WppKoEXshWtt67qE"
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("Токен не найден!")
         return
